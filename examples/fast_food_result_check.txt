@@ -1,0 +1,62 @@
+[summary]
+business_model=fast_food
+queue_type=single_queue
+strategy=fifo_fit
+
+[statistics]
+served_groups=12
+rejected_groups=0
+total_groups=12
+average_wait_time=0.00
+min_wait_time=0
+max_wait_time=0
+longest_queue_length=0
+shortest_queue_length=0
+table_utilization_rate=0.2261
+simulation_end_time=108
+average_wait_group_size_1=0.00
+average_wait_group_size_2=0.00
+average_wait_group_size_3=0.00
+average_wait_group_size_4=0.00
+
+[rejections]
+# group_id, reason
+
+[event_log]
+# timestamp, event_type, group_id, table_id, queue_size, message
+8,arrival,G1,,1,Group G1 arrived
+8,seating,G1,T1,0,Seated group G1 at table T1
+17,arrival,G2,,1,Group G2 arrived
+17,arrival,G3,,2,Group G3 arrived
+17,seating,G2,T10,1,Seated group G2 at table T10
+17,seating,G3,T11,0,Seated group G3 at table T11
+19,arrival,G4,,1,Group G4 arrived
+19,seating,G4,T12,0,Seated group G4 at table T12
+25,departure,G1,T1,0,Group G1 left table T1
+31,arrival,G5,,1,Group G5 arrived
+31,seating,G5,T1,0,Seated group G5 at table T1
+32,arrival,G6,,1,Group G6 arrived
+32,seating,G6,T5,0,Seated group G6 at table T5
+33,departure,G2,T10,0,Group G2 left table T10
+38,departure,G3,T11,0,Group G3 left table T11
+42,arrival,G7,,1,Group G7 arrived
+42,seating,G7,T2,0,Seated group G7 at table T2
+46,arrival,G8,,1,Group G8 arrived
+46,seating,G8,T3,0,Seated group G8 at table T3
+51,departure,G4,T12,0,Group G4 left table T12
+57,departure,G6,T5,0,Group G6 left table T5
+59,departure,G5,T1,0,Group G5 left table T1
+66,arrival,G9,,1,Group G9 arrived
+66,seating,G9,T1,0,Seated group G9 at table T1
+71,arrival,G10,,1,Group G10 arrived
+71,seating,G10,T10,0,Seated group G10 at table T10
+77,departure,G7,T2,0,Group G7 left table T2
+78,departure,G8,T3,0,Group G8 left table T3
+81,arrival,G11,,1,Group G11 arrived
+81,seating,G11,T11,0,Seated group G11 at table T11
+84,arrival,G12,,1,Group G12 arrived
+84,seating,G12,T2,0,Seated group G12 at table T2
+90,departure,G9,T1,0,Group G9 left table T1
+92,departure,G10,T10,0,Group G10 left table T10
+99,departure,G12,T2,0,Group G12 left table T2
+108,departure,G11,T11,0,Group G11 left table T11

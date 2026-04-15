@@ -1,0 +1,24 @@
+[business_model]
+name=fast_food
+
+[queue]
+type=single_queue
+strategy=fifo_fit
+
+[tables]
+# seats_per_table, table_count
+2,4
+4,8
+
+[arrivals]
+# arrival_time, group_size, dining_duration
+0,2,20
+2,1,15
+4,4,25
+5,2,18
+8,3,22
+12,2,16
+
+[seed]
+value=
+generated=false
