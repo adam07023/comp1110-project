@@ -15,6 +15,7 @@ def get_builtin_models() -> dict[str, BusinessModel]:
                 min_group_size=1,
                 max_group_size=4,
                 group_size_weights={1: 0.35, 2: 0.35, 3: 0.2, 4: 0.1},
+                group_size_weights={1: 0.35, 2: 0.35, 3: 0.1, 4: 0.2},
                 min_dining_duration=15,
                 max_dining_duration=35,
             ),
