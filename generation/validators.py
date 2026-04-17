@@ -33,3 +33,8 @@ def validate_scenario(scenario: Scenario) -> None:
             raise ValueError(f"Group size must be positive for {arrival.group_id}")
         if arrival.dining_duration <= 0:
             raise ValueError(f"Dining duration must be positive for {arrival.group_id}")
+
+    if scenario.patience_threshold_mean <= 0:
+        raise ValueError("Patience mean threshold must be positive")
+    if scenario.patience_threshold_sd < 0:
+        raise ValueError("Patience threshold standard deviation cannot be negative")

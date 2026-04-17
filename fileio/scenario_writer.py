@@ -16,6 +16,10 @@ def write_scenario_file(path: Path, scenario: Scenario) -> None:
         f"type={scenario.queue_type}",
         f"strategy={scenario.strategy_name}",
         "",
+        "[patience]",
+        f"mean_threshold={scenario.patience_threshold_mean}",
+        f"sd_threshold={scenario.patience_threshold_sd}",
+        "",
         "[tables]",
         "# seats_per_table, table_count",
     ]

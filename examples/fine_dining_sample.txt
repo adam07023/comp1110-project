@@ -5,6 +5,10 @@ name=fine_dining
 type=queue_by_group_size
 strategy=best_fit
 
+[patience]
+mean_threshold=42.0
+sd_threshold=10.0
+
 [tables]
 # seats_per_table, table_count
 2,3

@@ -51,7 +51,8 @@ def command_list_models() -> int:
     for model in get_builtin_models().values():
         print(
             f"{model.name}: queue={model.queue_type}, strategy={model.strategy_name}, "
-            f"tables={[(table.seats, table.count) for table in model.tables]}"
+            f"tables={[(table.seats, table.count) for table in model.tables]}, "
+            f"patience=(mean={model.patience_threshold_mean}, sd={model.patience_threshold_sd})"
         )
     return 0
 

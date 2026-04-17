@@ -12,6 +12,8 @@ class GeneratorProfile:
     group_size_weights: dict[int, float]
     min_dining_duration: int
     max_dining_duration: int
+    dining_duration_mean: float | None = None
+    dining_duration_sd: float | None = None
 
 
 @dataclass(frozen=True)
@@ -21,4 +23,6 @@ class BusinessModel:
     strategy_name: str
     tables: list[TableInventory]
     generator_profile: GeneratorProfile
+    patience_threshold_mean: float
+    patience_threshold_sd: float
     notes: str = field(default="")

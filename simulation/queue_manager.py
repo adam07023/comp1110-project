@@ -9,10 +9,11 @@ from domain.models import GroupArrival
 @dataclass(frozen=True)
 class QueueEntry:
     group: GroupArrival
+    leave_time: int
 
 
 class BaseQueueManager:
-    def enqueue(self, group: GroupArrival) -> None:
+    def enqueue(self, group: GroupArrival, leave_time: int | None = None) -> None:
         raise NotImplementedError
 
     def remove(self, entry: QueueEntry) -> None:
@@ -29,8 +30,11 @@ class SingleQueueManager(BaseQueueManager):
     def __init__(self) -> None:
         self._entries: deque[QueueEntry] = deque()
 
-    def enqueue(self, group: GroupArrival) -> None:
-        self._entries.append(QueueEntry(group))
+    def enqueue(self, group: GroupArrival, leave_time: int | None = None) -> None:
+        fallback_leave_time = group.arrival_time + 10**9
+        self._entries.append(
+            QueueEntry(group=group, leave_time=leave_time if leave_time is not None else fallback_leave_time)
+        )
 
     def remove(self, entry: QueueEntry) -> None:
         self._entries.remove(entry)
@@ -43,8 +47,11 @@ class GroupSizeQueueManager(BaseQueueManager):
     def __init__(self) -> None:
         self._queues: dict[int, deque[QueueEntry]] = defaultdict(deque)
 
-    def enqueue(self, group: GroupArrival) -> None:
-        self._queues[group.group_size].append(QueueEntry(group))
+    def enqueue(self, group: GroupArrival, leave_time: int | None = None) -> None:
+        fallback_leave_time = group.arrival_time + 10**9
+        self._queues[group.group_size].append(
+            QueueEntry(group=group, leave_time=leave_time if leave_time is not None else fallback_leave_time)
+        )
 
     def remove(self, entry: QueueEntry) -> None:
         self._queues[entry.group.group_size].remove(entry)

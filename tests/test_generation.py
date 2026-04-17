@@ -11,3 +11,5 @@ class GenerationTests(unittest.TestCase):
         second = generate_random_scenario(model, seed=7, arrival_count=5, duration=60)
 
         self.assertEqual(first.arrivals, second.arrivals)
+        self.assertEqual(first.patience_threshold_mean, model.patience_threshold_mean)
+        self.assertEqual(first.patience_threshold_sd, model.patience_threshold_sd)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+import random
 from collections import defaultdict
 
 from domain.events import SimulationEvent
@@ -10,6 +11,11 @@ from generation.validators import validate_scenario
 from simulation.allocator import expand_tables
 from simulation.queue_manager import build_queue_manager
 from simulation.strategies import choose_seating
+
+
+def _sample_patience_threshold(mean: float, sd: float, rng: random.Random) -> int:
+    sampled = rng.gauss(mean, sd)
+    return max(1, int(round(sampled)))
 
 
 def _record_event(
@@ -43,6 +49,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
     seated_by_table: dict[str, SeatedGroup] = {}
     departures: list[tuple[int, str]] = []
     queue_manager = build_queue_manager(scenario.queue_type)
+    rng = random.Random(scenario.seed)
 
     arrivals = sorted(scenario.arrivals, key=lambda arrival: (arrival.arrival_time, arrival.group_id))
     arrivals_by_time: dict[int, list[GroupArrival]] = defaultdict(list)
@@ -58,11 +65,14 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
     pending_times = sorted(arrivals_by_time)
     time_cursor = 0
 
-    while pending_times or departures:
+    while pending_times or departures or queue_manager.size() > 0:
         next_arrival_time = pending_times[0] if pending_times else None
         next_departure_time = departures[0][0] if departures else None
+        next_leave_time = min((entry.leave_time for entry in queue_manager.all_entries()), default=None)
 
-        candidate_times = [time for time in (next_arrival_time, next_departure_time) if time is not None]
+        candidate_times = [
+            time for time in (next_arrival_time, next_departure_time, next_leave_time) if time is not None
+        ]
         time_cursor = min(candidate_times)
 
         while departures and departures[0][0] == time_cursor:
@@ -97,7 +107,13 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 )
                 continue
 
-            queue_manager.enqueue(arrival)
+            patience_threshold = _sample_patience_threshold(
+                mean=scenario.patience_threshold_mean,
+                sd=scenario.patience_threshold_sd,
+                rng=rng,
+            )
+            leave_time = arrival.arrival_time + patience_threshold
+            queue_manager.enqueue(arrival, leave_time=leave_time)
             _record_event(
                 events,
                 timestamp=time_cursor,
@@ -107,10 +123,33 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 message=f"Group {arrival.group_id} arrived",
                 group_size=arrival.group_size,
                 dining_duration=arrival.dining_duration,
+                patience_threshold=patience_threshold,
+                leave_time=leave_time,
             )
 
         if pending_times and pending_times[0] == time_cursor:
             pending_times.pop(0)
+
+        entries_leaving = sorted(
+            [entry for entry in queue_manager.all_entries() if entry.leave_time <= time_cursor],
+            key=lambda item: (item.leave_time, item.group.arrival_time, item.group.group_id),
+        )
+        for leaving_entry in entries_leaving:
+            queue_manager.remove(leaving_entry)
+            rejection = RejectedGroup(
+                group=leaving_entry.group,
+                reason="left_due_to_patience",
+            )
+            rejected.append(rejection)
+            _record_event(
+                events,
+                timestamp=time_cursor,
+                event_type="abandonment",
+                group_id=leaving_entry.group.group_id,
+                queue_size=queue_manager.size(),
+                message=f"Group {leaving_entry.group.group_id} left the queue due to patience limit",
+                waited_time=time_cursor - leaving_entry.group.arrival_time,
+            )
 
         while True:
             choice = choose_seating(

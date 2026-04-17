@@ -4,6 +4,7 @@ from pathlib import Path
 
 from domain.models import GroupArrival, Scenario, TableInventory
 from generation.validators import validate_scenario
+from presets.builtins import get_builtin_models
 
 
 def _read_sections(path: Path) -> dict[str, list[str]]:
@@ -72,7 +73,20 @@ def load_scenario(path: Path) -> Scenario:
     sections = _read_sections(path)
     business_model = _parse_key_value_lines(sections.get("business_model", []))
     queue = _parse_key_value_lines(sections.get("queue", []))
+    patience = _parse_key_value_lines(sections.get("patience", []))
     seed = _parse_key_value_lines(sections.get("seed", []))
+    builtin_model = get_builtin_models().get(business_model["name"])
+
+    mean_threshold = (
+        float(patience["mean_threshold"])
+        if patience.get("mean_threshold")
+        else (builtin_model.patience_threshold_mean if builtin_model else 45.0)
+    )
+    sd_threshold = (
+        float(patience["sd_threshold"])
+        if patience.get("sd_threshold")
+        else (builtin_model.patience_threshold_sd if builtin_model else 10.0)
+    )
 
     scenario = Scenario(
         business_model_name=business_model["name"],
@@ -80,6 +94,8 @@ def load_scenario(path: Path) -> Scenario:
         strategy_name=queue["strategy"],
         tables=_parse_tables(sections.get("tables", [])),
         arrivals=_parse_arrivals(sections.get("arrivals", [])),
+        patience_threshold_mean=mean_threshold,
+        patience_threshold_sd=sd_threshold,
         seed=int(seed["value"]) if seed.get("value") else None,
         generated=seed.get("generated", "false").lower() == "true",
     )

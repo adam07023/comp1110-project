@@ -40,6 +40,8 @@ class Scenario:
     strategy_name: str
     tables: list[TableInventory]
     arrivals: list[GroupArrival]
+    patience_threshold_mean: float = 45.0
+    patience_threshold_sd: float = 10.0
     seed: int | None = None
     generated: bool = False
 
