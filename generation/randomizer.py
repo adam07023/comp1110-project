@@ -12,6 +12,14 @@ def _weighted_group_sizes(group_size_weights: dict[int, float]) -> tuple[list[in
     return sizes, weights
 
 
+def _sample_patience_override(business_model: BusinessModel, rng: random.Random) -> int:
+    sampled = rng.gauss(
+        business_model.patience_threshold_mean,
+        business_model.patience_threshold_sd,
+    )
+    return max(1, int(round(sampled)))
+
+
 def _sample_dining_duration(business_model: BusinessModel, rng: random.Random) -> int:
     profile = business_model.generator_profile
     min_duration = profile.min_dining_duration
@@ -54,6 +62,7 @@ def generate_random_scenario(
                 arrival_time=arrival_time,
                 group_size=group_size,
                 dining_duration=dining_duration,
+                patience_override=_sample_patience_override(business_model, rng),
             )
         )
 

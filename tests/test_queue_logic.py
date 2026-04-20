@@ -5,16 +5,17 @@ from presets.builtins import get_builtin_models
 
 
 class QueueLogicTests(unittest.TestCase):
-    def test_validate_queue_rows_enforces_unique_arrival(self) -> None:
+    def test_validate_queue_rows_allows_duplicate_arrival_times(self) -> None:
         model = get_builtin_models()["fast_food"]
-        with self.assertRaises(ValueError):
-            validate_queue_rows(
-                [
-                    QueueRowInput(arrival_time=1, group_size=2, dining_duration=12),
-                    QueueRowInput(arrival_time=1, group_size=2, dining_duration=13),
-                ],
-                model,
-            )
+        arrivals = validate_queue_rows(
+            [
+                QueueRowInput(arrival_time=1, group_size=2, dining_duration=12),
+                QueueRowInput(arrival_time=1, group_size=2, dining_duration=13),
+            ],
+            model,
+        )
+
+        self.assertEqual([row.arrival_time for row in arrivals], [1, 1])
 
     def test_validate_queue_rows_sorts_and_preserves_patience(self) -> None:
         model = get_builtin_models()["fast_food"]
@@ -35,3 +36,11 @@ class QueueLogicTests(unittest.TestCase):
 
         sampled = sample_arrival_count("fast_food", DummyRng())
         self.assertEqual(sampled, MAX_QUEUE_LENGTH)
+
+    def test_sample_arrival_count_never_returns_zero(self) -> None:
+        class DummyRng:
+            def gauss(self, _mean, _sd):
+                return -1000
+
+        sampled = sample_arrival_count("fast_food", DummyRng())
+        self.assertEqual(sampled, 1)

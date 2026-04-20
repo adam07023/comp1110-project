@@ -54,15 +54,31 @@ def _parse_arrivals(lines: list[str]) -> list[GroupArrival]:
     for line in lines:
         if line.startswith("#"):
             continue
-        arrival_time_text, group_size_text, dining_duration_text = [
-            part.strip() for part in line.split(",", 2)
-        ]
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) == 3:
+            group_id = f"G{next_group_number}"
+            arrival_time_text, group_size_text, dining_duration_text = parts
+            patience_override = None
+        elif len(parts) == 4:
+            group_id = f"G{next_group_number}"
+            arrival_time_text, group_size_text, dining_duration_text, patience_text = parts
+            patience_override = int(patience_text) if patience_text else None
+        elif len(parts) == 5:
+            group_id, arrival_time_text, group_size_text, dining_duration_text, patience_text = parts
+            if not group_id:
+                raise ValueError("Arrival group_id cannot be empty")
+            patience_override = int(patience_text) if patience_text else None
+        else:
+            raise ValueError(
+                "Arrival rows must contain either 3, 4, or 5 comma-separated values"
+            )
         arrivals.append(
             GroupArrival(
-                group_id=f"G{next_group_number}",
+                group_id=group_id,
                 arrival_time=int(arrival_time_text),
                 group_size=int(group_size_text),
                 dining_duration=int(dining_duration_text),
+                patience_override=patience_override,
             )
         )
         next_group_number += 1
@@ -75,6 +91,13 @@ def load_scenario(path: Path) -> Scenario:
     queue = _parse_key_value_lines(sections.get("queue", []))
     patience = _parse_key_value_lines(sections.get("patience", []))
     seed = _parse_key_value_lines(sections.get("seed", []))
+    if "name" not in business_model:
+        raise ValueError("Scenario must define business_model name")
+    if "type" not in queue:
+        raise ValueError("Scenario must define queue type")
+    if "strategy" not in queue:
+        raise ValueError("Scenario must define queue strategy")
+
     builtin_model = get_builtin_models().get(business_model["name"])
 
     mean_threshold = (

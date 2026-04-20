@@ -28,11 +28,14 @@ def write_scenario_file(path: Path, scenario: Scenario) -> None:
         [
             "",
             "[arrivals]",
-            "# arrival_time, group_size, dining_duration",
+            "# group_id, arrival_time, group_size, dining_duration, patience_override",
         ]
     )
     lines.extend(
-        f"{arrival.arrival_time},{arrival.group_size},{arrival.dining_duration}"
+        (
+            f"{arrival.group_id},{arrival.arrival_time},{arrival.group_size},"
+            f"{arrival.dining_duration},{'' if arrival.patience_override is None else arrival.patience_override}"
+        )
         for arrival in scenario.arrivals
     )
     lines.extend(

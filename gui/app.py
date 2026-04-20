@@ -353,26 +353,8 @@ class Layer2Widget(QWidget):
             duration=max(10, count * 3),
             generated=True,
         )
-
-        # Enforce unique arrival time for GUI rules.
-        used: set[int] = set()
-        fixed_arrivals = []
-        for arrival in scenario.arrivals:
-            candidate = arrival.arrival_time
-            while candidate in used:
-                candidate += 1
-            used.add(candidate)
-            fixed_arrivals.append(
-                arrival.__class__(
-                    group_id=arrival.group_id,
-                    arrival_time=candidate,
-                    group_size=arrival.group_size,
-                    dining_duration=arrival.dining_duration,
-                    patience_override=arrival.patience_override,
-                )
-            )
-        fixed_arrivals.sort(key=lambda row: row.arrival_time)
-        self._populate_from_scenario(fixed_arrivals)
+        self.loaded_scenario = scenario
+        self._populate_from_scenario(scenario.arrivals)
 
     def _add_row(
         self,
@@ -581,4 +563,3 @@ def apply_theme(app: QApplication) -> None:
         }
         """
     )
-

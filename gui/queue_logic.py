@@ -28,7 +28,7 @@ class QueueRowInput:
 def sample_arrival_count(model_name: str, rng: random.Random) -> int:
     mean, sd = ARRIVAL_COUNT_DISTRIBUTIONS.get(model_name, (20.0, 6.0))
     sampled = int(round(rng.gauss(mean, sd)))
-    return min(MAX_QUEUE_LENGTH, max(0, sampled))
+    return min(MAX_QUEUE_LENGTH, max(1, sampled))
 
 
 def validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> list[GroupArrival]:
@@ -36,15 +36,11 @@ def validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> list
         raise ValueError(f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
 
     profile = model.generator_profile
-    seen_arrivals: set[int] = set()
     normalized: list[GroupArrival] = []
 
     for index, row in enumerate(rows, start=1):
         if row.arrival_time < 0:
             raise ValueError("Arrival time cannot be negative")
-        if row.arrival_time in seen_arrivals:
-            raise ValueError("Arrival times must be unique")
-        seen_arrivals.add(row.arrival_time)
 
         if not (profile.min_group_size <= row.group_size <= profile.max_group_size):
             raise ValueError(
@@ -68,5 +64,5 @@ def validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> list
             )
         )
 
-    normalized.sort(key=lambda row: row.arrival_time)
+    normalized.sort(key=lambda row: (row.arrival_time, row.group_id))
     return normalized

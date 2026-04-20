@@ -13,3 +13,10 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(first.arrivals, second.arrivals)
         self.assertEqual(first.patience_threshold_mean, model.patience_threshold_mean)
         self.assertEqual(first.patience_threshold_sd, model.patience_threshold_sd)
+
+    def test_random_generation_populates_patience_override(self) -> None:
+        model = get_builtin_models()["cafe"]
+        scenario = generate_random_scenario(model, seed=13, arrival_count=6, duration=45)
+
+        self.assertTrue(all(arrival.patience_override is not None for arrival in scenario.arrivals))
+        self.assertTrue(all(arrival.patience_override >= 1 for arrival in scenario.arrivals))
