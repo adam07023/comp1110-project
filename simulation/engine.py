@@ -107,10 +107,14 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 )
                 continue
 
-            patience_threshold = _sample_patience_threshold(
-                mean=scenario.patience_threshold_mean,
-                sd=scenario.patience_threshold_sd,
-                rng=rng,
+            patience_threshold = (
+                arrival.patience_override
+                if arrival.patience_override is not None
+                else _sample_patience_threshold(
+                    mean=scenario.patience_threshold_mean,
+                    sd=scenario.patience_threshold_sd,
+                    rng=rng,
+                )
             )
             leave_time = arrival.arrival_time + patience_threshold
             queue_manager.enqueue(arrival, leave_time=leave_time)

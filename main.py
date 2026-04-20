@@ -44,6 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--scenario", required=True)
     run.add_argument("--output")
 
+    subparsers.add_parser("gui", help="Launch the PyQt GUI")
+
     return parser
 
 
@@ -97,6 +99,16 @@ def command_run(scenario_path: str, output: str | None) -> int:
     return 0
 
 
+def command_gui() -> int:
+    try:
+        from gui_main import main as gui_main
+    except ModuleNotFoundError as error:
+        raise ValueError(
+            "PyQt GUI dependencies are not installed. Install PyQt6 to use the gui command."
+        ) from error
+    return gui_main()
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -110,6 +122,8 @@ def main() -> int:
             return command_generate(args.model, args.output, args.seed, args.arrival_count, args.duration)
         if args.command == "run":
             return command_run(args.scenario, args.output)
+        if args.command == "gui":
+            return command_gui()
     except ValueError as error:
         parser.exit(status=2, message=f"error: {error}\n")
 

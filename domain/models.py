@@ -23,6 +23,7 @@ class GroupArrival:
     arrival_time: int
     group_size: int
     dining_duration: int
+    patience_override: int | None = None
 
 
 @dataclass(frozen=True)

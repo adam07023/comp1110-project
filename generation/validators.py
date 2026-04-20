@@ -27,12 +27,16 @@ def validate_scenario(scenario: Scenario) -> None:
             raise ValueError(f"Group size must be an integer for {arrival.group_id}")
         if not isinstance(arrival.dining_duration, int):
             raise ValueError(f"Dining duration must be an integer for {arrival.group_id}")
+        if arrival.patience_override is not None and not isinstance(arrival.patience_override, int):
+            raise ValueError(f"Patience override must be an integer for {arrival.group_id}")
         if arrival.arrival_time < 0:
             raise ValueError(f"Arrival time cannot be negative for {arrival.group_id}")
         if arrival.group_size <= 0:
             raise ValueError(f"Group size must be positive for {arrival.group_id}")
         if arrival.dining_duration <= 0:
             raise ValueError(f"Dining duration must be positive for {arrival.group_id}")
+        if arrival.patience_override is not None and arrival.patience_override <= 0:
+            raise ValueError(f"Patience override must be positive for {arrival.group_id}")
 
     if scenario.patience_threshold_mean <= 0:
         raise ValueError("Patience mean threshold must be positive")
