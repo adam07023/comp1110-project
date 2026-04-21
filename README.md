@@ -1,4 +1,3 @@
-````markdown
 # Restaurant Queue Simulation
 
 A discrete-event restaurant queue simulator written in Python, with both a CLI and PyQt6 GUI interface.
@@ -79,4 +78,3 @@ Scenarios are stored as JSON files containing the business model parameters and 
 - Groups larger than the largest table capacity are rejected and recorded.
 - Departure events at a timestamp are processed before arrivals at the same timestamp.
 - Groups whose wait time exceeds their patience threshold are removed from the queue and recorded as departed without being seated.
-````
