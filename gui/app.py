@@ -275,24 +275,31 @@ class Layer1Widget(QWidget):
         self.models = get_builtin_models()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 18, 28, 24)
-        layout.setSpacing(14)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(32, 26, 32, 32)
+        layout.setSpacing(18)
         title = QLabel("Choose Restaurant Configuration")
         title.setProperty("title", True)
         title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(title)
+        layout.addSpacing(16)
 
         grid = QGridLayout()
-        grid.setHorizontalSpacing(18)
-        grid.setVerticalSpacing(14)
-        grid.setContentsMargins(12, 4, 12, 0)
+        grid.setHorizontalSpacing(20)
+        grid.setVerticalSpacing(18)
+        grid.setContentsMargins(24, 10, 24, 0)
         ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck"]
         for idx, key in enumerate(ordered):
             model = self.models[key]
-            card = QGroupBox(_friendly_model_name(model.name))
-            card_layout = QVBoxLayout(card)
-            card_layout.setSpacing(10)
+            card = QWidget()
+            card_wrapper = QVBoxLayout(card)
+            card_wrapper.setContentsMargins(0, 0, 0, 0)
+            card_wrapper.setSpacing(6)
+            card_title = QLabel(_friendly_model_name(model.name))
+            card_title.setProperty("cardTitle", True)
+            card_wrapper.addWidget(card_title)
+            card_box = QGroupBox()
+            card_layout = QVBoxLayout(card_box)
+            card_layout.setSpacing(12)
             info = QLabel(_model_summary(model))
             info.setWordWrap(True)
             card_layout.addWidget(info)
@@ -302,21 +309,32 @@ class Layer1Widget(QWidget):
             select_btn.clicked.connect(lambda _checked=False, selected=model: self.on_model_selected(selected))
             card_layout.addWidget(view_btn)
             card_layout.addWidget(select_btn)
+            card_wrapper.addWidget(card_box)
             grid.addWidget(card, idx // 3, idx % 3)
 
-        custom_card = QGroupBox("Customize Restaurant")
-        custom_layout = QVBoxLayout(custom_card)
-        custom_layout.setSpacing(10)
+        custom_card = QWidget()
+        custom_wrapper = QVBoxLayout(custom_card)
+        custom_wrapper.setContentsMargins(0, 0, 0, 0)
+        custom_wrapper.setSpacing(6)
+        custom_title = QLabel("Customize Restaurant")
+        custom_title.setProperty("cardTitle", True)
+        custom_wrapper.addWidget(custom_title)
+        custom_box = QGroupBox()
+        custom_layout = QVBoxLayout(custom_box)
+        custom_layout.setSpacing(12)
         custom_text = QLabel("Create a tailored restaurant setup with your own seating and timing rules.")
         custom_text.setWordWrap(True)
         custom_layout.addWidget(custom_text)
         custom_btn = QPushButton("Select")
         custom_btn.clicked.connect(self._customize)
         custom_layout.addWidget(custom_btn)
+        custom_wrapper.addWidget(custom_box)
         grid.addWidget(custom_card, 1, 2)
         layout.addLayout(grid)
+        layout.addStretch(1)
 
         load_row = QHBoxLayout()
+        load_row.setContentsMargins(24, 4, 24, 0)
         load_btn = QPushButton("Load Scenario JSON")
         load_btn.clicked.connect(self._load_json)
         load_row.addWidget(load_btn)
@@ -358,13 +376,13 @@ class Layer2Widget(QWidget):
         self._is_sorting = False
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 18, 28, 24)
-        layout.setSpacing(14)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(32, 26, 32, 32)
+        layout.setSpacing(18)
         header = QLabel("Build Queue")
         header.setProperty("title", True)
         header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(header)
+        layout.addSpacing(12)
 
         controls = QHBoxLayout()
         self.random_btn = QPushButton("Randomly Generate Queue")
@@ -397,6 +415,7 @@ class Layer2Widget(QWidget):
         self.run_btn = QPushButton("Run Simulation")
         self.run_btn.clicked.connect(self._run)
         layout.addWidget(self.run_btn)
+        layout.addStretch(1)
 
     def set_context(self, model: BusinessModel, loaded_scenario: Scenario | None = None) -> None:
         self.model = model
@@ -534,13 +553,13 @@ class Layer3Widget(QWidget):
         self.result = None
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 18, 28, 24)
-        layout.setSpacing(14)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(32, 26, 32, 32)
+        layout.setSpacing(18)
         header = QLabel("Simulation Results")
         header.setProperty("title", True)
         header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(header)
+        layout.addSpacing(12)
 
         controls = QHBoxLayout()
         view_btn = QPushButton("View Scenario")
@@ -564,6 +583,7 @@ class Layer3Widget(QWidget):
         self.splitter.addWidget(self.stats_text)
         self.splitter.addWidget(self.scenario_text)
         layout.addWidget(self.splitter)
+        layout.addStretch(1)
 
     def set_result(self, scenario: Scenario, result) -> None:
         self.scenario = scenario
@@ -647,30 +667,31 @@ def apply_theme(app: QApplication) -> None:
             background-color: #f8f8f4;
             color: #242424;
             font-family: "Times New Roman", "Times", "Georgia", serif;
-            font-size: 13px;
+            font-size: 15px;
         }
         QLabel[title="true"] {
+            font-size: 24px;
+            font-weight: 600;
+            padding: 4px 0 8px 0;
+        }
+        QLabel[cardTitle="true"] {
             font-size: 18px;
             font-weight: 600;
-            padding: 0 0 2px 0;
+            padding: 0 0 2px 4px;
         }
         QGroupBox {
             background-color: #fcfcf9;
             border: 1px solid #d7d7d2;
             border-radius: 6px;
-            margin-top: 4px;
-            padding: 10px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 4px;
+            margin-top: 0px;
+            padding: 12px;
         }
         QPushButton {
             background-color: #f1f0eb;
             border: 1px solid #c9c8c2;
             border-radius: 4px;
-            padding: 6px 10px;
+            padding: 8px 12px;
+            font-size: 15px;
         }
         QPushButton:hover {
             background-color: #e8e7e1;
@@ -678,11 +699,13 @@ def apply_theme(app: QApplication) -> None:
         QPlainTextEdit, QLineEdit, QSpinBox, QTableWidget {
             background-color: #fffefb;
             border: 1px solid #d7d7d2;
+            font-size: 15px;
         }
         QHeaderView::section {
             background-color: #efeee8;
             border: 1px solid #d7d7d2;
-            padding: 4px;
+            padding: 6px;
+            font-size: 15px;
         }
         """
     )
