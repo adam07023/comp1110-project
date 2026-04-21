@@ -10,6 +10,7 @@ def compute_statistics(
     seated_groups: list[SeatedGroup],
     rejected_groups: list[RejectedGroup],
     tables: list[Table],
+    queue_lengths: list[int] | None = None,
 ) -> SimulationStatistics:
     waits = [seated.seated_time - seated.group.arrival_time for seated in seated_groups]
     waits_by_size: dict[int, list[int]] = defaultdict(list)
@@ -32,6 +33,9 @@ def compute_statistics(
         for group_size, group_waits in waits_by_size.items()
     }
 
+    longest_queue = max(queue_lengths) if queue_lengths else 0
+    shortest_queue = min(queue_lengths) if queue_lengths else 0
+
     return SimulationStatistics(
         served_groups=len(seated_groups),
         rejected_groups=len(rejected_groups),
@@ -39,8 +43,8 @@ def compute_statistics(
         average_wait_time=sum(waits) / len(waits) if waits else 0.0,
         min_wait_time=min(waits) if waits else None,
         max_wait_time=max(waits) if waits else None,
-        longest_queue_length=0,
-        shortest_queue_length=0,
+        longest_queue_length=longest_queue,
+        shortest_queue_length=shortest_queue,
         table_utilization_rate=utilization,
         simulation_end_time=simulation_end_time,
         average_wait_by_group_size=average_wait_by_group_size,

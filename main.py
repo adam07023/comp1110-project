@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from domain.business_model import BusinessModel
+from domain.models import Scenario, SimulationResult
 from fileio.result_writer import write_result_file
 from fileio.scenario_loader import load_scenario
 from fileio.scenario_writer import write_scenario_file
@@ -11,7 +13,8 @@ from presets.builtins import get_builtin_models
 from simulation.engine import run_simulation
 
 
-def _get_model(model_name: str):
+def get_model(model_name: str) -> BusinessModel:
+    """Get a business model by name. Raises ValueError if not found."""
     models = get_builtin_models()
     if model_name not in models:
         available = ", ".join(sorted(models))
@@ -60,7 +63,7 @@ def command_list_models() -> int:
 
 
 def command_write_example(model_name: str, output: str) -> int:
-    model = _get_model(model_name)
+    model = get_model(model_name)
     scenario = generate_random_scenario(
         business_model=model,
         seed=17,
@@ -74,7 +77,7 @@ def command_write_example(model_name: str, output: str) -> int:
 
 
 def command_generate(model_name: str, output: str, seed: int, arrival_count: int, duration: int) -> int:
-    model = _get_model(model_name)
+    model = get_model(model_name)
     scenario = generate_random_scenario(
         business_model=model,
         seed=seed,
@@ -107,6 +110,55 @@ def command_gui() -> int:
             "PyQt GUI dependencies are not installed. Install PyQt6 to use the gui command."
         ) from error
     return gui_main()
+
+
+# === Exportable core functions for programmatic use (CLI and GUI) ===
+
+
+def cli_generate_scenario(
+    model_name: str, seed: int, arrival_count: int, duration: int
+) -> Scenario:
+    """Generate a random scenario from a built-in model."""
+    model = get_model(model_name)
+    return generate_random_scenario(
+        business_model=model,
+        seed=seed,
+        arrival_count=arrival_count,
+        duration=duration,
+        generated=True,
+    )
+
+
+def cli_write_example_scenario(model_name: str) -> Scenario:
+    """Generate an example scenario from a built-in model."""
+    model = get_model(model_name)
+    return generate_random_scenario(
+        business_model=model,
+        seed=17,
+        arrival_count=12,
+        duration=120,
+        generated=False,
+    )
+
+
+def cli_run_simulation(scenario: Scenario) -> SimulationResult:
+    """Run a simulation from a scenario."""
+    return run_simulation(scenario)
+
+
+def cli_load_scenario(scenario_path: str) -> Scenario:
+    """Load a scenario from a file."""
+    return load_scenario(Path(scenario_path))
+
+
+def cli_save_scenario(scenario: Scenario, output_path: str) -> None:
+    """Save a scenario to a file."""
+    write_scenario_file(Path(output_path), scenario)
+
+
+def cli_save_result(result: SimulationResult, output_path: str) -> None:
+    """Save a simulation result to a file."""
+    write_result_file(Path(output_path), result)
 
 
 def main() -> int:

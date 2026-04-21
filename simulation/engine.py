@@ -118,6 +118,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             )
             leave_time = arrival.arrival_time + patience_threshold
             queue_manager.enqueue(arrival, leave_time=leave_time)
+            queue_lengths.append(queue_manager.size())
             _record_event(
                 events,
                 timestamp=time_cursor,
@@ -190,9 +191,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
 
         queue_lengths.append(queue_manager.size())
 
-    statistics = compute_statistics(arrivals, seated_groups, rejected, tables)
-    statistics.longest_queue_length = max(queue_lengths) if queue_lengths else 0
-    statistics.shortest_queue_length = min(queue_lengths) if queue_lengths else 0
+    statistics = compute_statistics(arrivals, seated_groups, rejected, tables, queue_lengths)
 
     return SimulationResult(
         scenario=scenario,

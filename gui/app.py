@@ -31,13 +31,10 @@ from PyQt6.QtWidgets import (
 from domain.business_model import BusinessModel, GeneratorProfile
 from domain.models import Scenario, TableInventory
 from fileio.json_scenario_io import load_scenario_json, write_scenario_json
-from fileio.result_writer import write_result_file
-from generation.randomizer import generate_random_scenario
-from presets.builtins import get_builtin_models
-from simulation.engine import run_simulation
-
 from gui.queue_logic import QueueRowInput, sample_arrival_count, validate_queue_rows
 from gui.queue_logic import MAX_QUEUE_LENGTH
+from main import cli_generate_scenario, cli_run_simulation, cli_write_example_scenario, cli_save_result
+from presets.builtins import get_builtin_models
 
 
 def _parse_tables(raw: str) -> list[TableInventory]:
@@ -346,12 +343,11 @@ class Layer2Widget(QWidget):
             return
         count = sample_arrival_count(self.model.name, random.Random())
         seed = random.randint(0, 1_000_000)
-        scenario = generate_random_scenario(
-            business_model=self.model,
+        scenario = cli_generate_scenario(
+            model_name=self.model.name,
             seed=seed,
             arrival_count=count,
             duration=max(10, count * 3),
-            generated=True,
         )
         self.loaded_scenario = scenario
         self._populate_from_scenario(scenario.arrivals)
@@ -363,7 +359,7 @@ class Layer2Widget(QWidget):
         dining_duration: int | None = None,
         patience_override: int | None = None,
     ) -> None:
-        if self.table.rowCount() >= MAX_QUEUE_LENGTH:
+        if self.table.rowCount() > MAX_QUEUE_LENGTH:
             QMessageBox.warning(self, "Queue Limit", f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
             return
         row = self.table.rowCount()
@@ -407,7 +403,7 @@ class Layer2Widget(QWidget):
         except Exception as error:  # noqa: BLE001
             QMessageBox.warning(self, "Invalid Queue", str(error))
             return
-        result = run_simulation(scenario)
+        result = cli_run_simulation(scenario)
         self.on_run(scenario, result)
 
 
@@ -473,7 +469,7 @@ class Layer3Widget(QWidget):
         selected, _ = QFileDialog.getSaveFileName(self, "Save Report", "", "Text Files (*.txt)")
         if not selected:
             return
-        write_result_file(Path(selected), self.result)
+        cli_save_result(self.result, selected)
         QMessageBox.information(self, "Saved", f"Saved report to {selected}")
 
 
