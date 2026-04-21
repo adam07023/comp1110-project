@@ -1,16 +1,36 @@
 from __future__ import annotations
 
 import argparse
+import random
+from dataclasses import dataclass
 from pathlib import Path
 
 from domain.business_model import BusinessModel
-from domain.models import Scenario, SimulationResult
+from domain.models import GroupArrival, Scenario, SimulationResult
 from fileio.result_writer import write_result_file
 from fileio.scenario_loader import load_scenario
 from fileio.scenario_writer import write_scenario_file
 from generation.randomizer import generate_random_scenario
 from presets.builtins import get_builtin_models
 from simulation.engine import run_simulation
+
+MAX_QUEUE_LENGTH = 99
+
+ARRIVAL_COUNT_DISTRIBUTIONS: dict[str, tuple[float, float]] = {
+    "fast_food": (26.0, 6.0),
+    "fine_dining": (14.0, 4.0),
+    "casual_dining": (34.0, 8.0),
+    "cafe": (22.0, 5.0),
+    "food_truck": (40.0, 10.0),
+}
+
+
+@dataclass(frozen=True)
+class QueueRowInput:
+    arrival_time: int
+    group_size: int
+    dining_duration: int
+    patience_override: int | None = None
 
 
 def get_model(model_name: str) -> BusinessModel:
@@ -116,10 +136,14 @@ def command_gui() -> int:
 
 
 def cli_generate_scenario(
-    model_name: str, seed: int, arrival_count: int, duration: int
+    model_name: str | None = None,
+    seed: int = 0,
+    arrival_count: int = 0,
+    duration: int = 0,
+    business_model: BusinessModel | None = None,
 ) -> Scenario:
-    """Generate a random scenario from a built-in model."""
-    model = get_model(model_name)
+    """Generate a random scenario from a business model."""
+    model = business_model if business_model is not None else get_model(model_name or "")
     return generate_random_scenario(
         business_model=model,
         seed=seed,
@@ -159,6 +183,51 @@ def cli_save_scenario(scenario: Scenario, output_path: str) -> None:
 def cli_save_result(result: SimulationResult, output_path: str) -> None:
     """Save a simulation result to a file."""
     write_result_file(Path(output_path), result)
+
+
+def cli_sample_arrival_count(model_name: str, rng: random.Random) -> int:
+    """Sample a bounded arrival count for random queue generation."""
+    mean, sd = ARRIVAL_COUNT_DISTRIBUTIONS.get(model_name, (20.0, 6.0))
+    sampled = int(round(rng.gauss(mean, sd)))
+    return min(MAX_QUEUE_LENGTH, max(1, sampled))
+
+
+def cli_validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> list[GroupArrival]:
+    """Validate editable GUI/CLI queue rows against a business model."""
+    if len(rows) > MAX_QUEUE_LENGTH:
+        raise ValueError(f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
+
+    profile = model.generator_profile
+    normalized: list[GroupArrival] = []
+
+    for index, row in enumerate(rows, start=1):
+        if row.arrival_time < 0:
+            raise ValueError("Arrival time cannot be negative")
+
+        if not (profile.min_group_size <= row.group_size <= profile.max_group_size):
+            raise ValueError(
+                f"Group size must be between {profile.min_group_size} and {profile.max_group_size}"
+            )
+        if not (profile.min_dining_duration <= row.dining_duration <= profile.max_dining_duration):
+            raise ValueError(
+                "Dining duration must be between "
+                f"{profile.min_dining_duration} and {profile.max_dining_duration}"
+            )
+        if row.patience_override is not None and row.patience_override <= 0:
+            raise ValueError("Patience value must be positive when provided")
+
+        normalized.append(
+            GroupArrival(
+                group_id=f"G{index}",
+                arrival_time=row.arrival_time,
+                group_size=row.group_size,
+                dining_duration=row.dining_duration,
+                patience_override=row.patience_override,
+            )
+        )
+
+    normalized.sort(key=lambda row: (row.arrival_time, row.group_id))
+    return normalized
 
 
 def main() -> int:

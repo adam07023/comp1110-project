@@ -31,9 +31,15 @@ from PyQt6.QtWidgets import (
 from domain.business_model import BusinessModel, GeneratorProfile
 from domain.models import Scenario, TableInventory
 from fileio.json_scenario_io import load_scenario_json, write_scenario_json
-from gui.queue_logic import QueueRowInput, sample_arrival_count, validate_queue_rows
-from gui.queue_logic import MAX_QUEUE_LENGTH
-from main import cli_generate_scenario, cli_run_simulation, cli_write_example_scenario, cli_save_result
+from main import (
+    MAX_QUEUE_LENGTH,
+    QueueRowInput,
+    cli_generate_scenario,
+    cli_run_simulation,
+    cli_sample_arrival_count,
+    cli_save_result,
+    cli_validate_queue_rows,
+)
 from presets.builtins import get_builtin_models
 
 
@@ -325,7 +331,7 @@ class Layer2Widget(QWidget):
         if not self.model:
             raise ValueError("No business model selected")
 
-        arrivals = validate_queue_rows(self._read_rows(), self.model)
+        arrivals = cli_validate_queue_rows(self._read_rows(), self.model)
         return Scenario(
             business_model_name=self.model.name,
             queue_type=self.model.queue_type,
@@ -341,10 +347,10 @@ class Layer2Widget(QWidget):
     def _randomize(self) -> None:
         if not self.model:
             return
-        count = sample_arrival_count(self.model.name, random.Random())
+        count = cli_sample_arrival_count(self.model.name, random.Random())
         seed = random.randint(0, 1_000_000)
         scenario = cli_generate_scenario(
-            model_name=self.model.name,
+            business_model=self.model,
             seed=seed,
             arrival_count=count,
             duration=max(10, count * 3),
