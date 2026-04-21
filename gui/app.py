@@ -403,10 +403,10 @@ class Layer2Widget(QWidget):
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(
             [
-                "Arrival Time (minutes)",
-                "Group Size (guests)",
-                "Dining Duration (minutes)",
-                "Patience (minutes)",
+                "Arrival Time (min)",
+                "Group Size",
+                "Dining Duration (min)",
+                "Patience (min)",
             ]
         )
         self.table.itemChanged.connect(self._sort_by_arrival)
