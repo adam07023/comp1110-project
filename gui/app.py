@@ -409,8 +409,13 @@ class Layer2Widget(QWidget):
                 "Patience (min)",
             ]
         )
+        self.table.setColumnWidth(0, 200)  # Arrival Time
+        self.table.setColumnWidth(1, 200)  # Group Size
+        self.table.setColumnWidth(2, 200)  # Dining Duration
+        self.table.setColumnWidth(3, 200)  # Patience
         self.table.itemChanged.connect(self._sort_by_arrival)
         layout.addWidget(self.table)
+        self.table.setFixedHeight(600)
 
         self.run_btn = QPushButton("Run Simulation")
         self.run_btn.clicked.connect(self._run)
