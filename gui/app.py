@@ -43,6 +43,101 @@ from main import (
 from presets.builtins import get_builtin_models
 
 
+def _friendly_model_name(model_name: str) -> str:
+    return model_name.replace("_", " ").title()
+
+
+def _model_summary(model: BusinessModel) -> str:
+    summaries = {
+        "fast_food": "Fast service, compact tables, and a steady flow of small parties.",
+        "fine_dining": "Longer meals, larger parties, and more deliberate table matching.",
+        "casual_dining": "A balanced room with mixed party sizes and moderate dining times.",
+        "cafe": "Mostly small groups, shorter stays, and efficient use of compact seating.",
+        "food_truck": "Single-order service with strict first-come, first-served progression.",
+    }
+    return summaries.get(model.name, model.notes or "Custom restaurant configuration.")
+
+
+def _format_model_details(model: BusinessModel) -> str:
+    profile = model.generator_profile
+    table_text = ", ".join(f"{table.count} table(s) of {table.seats}" for table in model.tables)
+    weight_text = ", ".join(
+        f"{group_size} guest(s): {weight:.2f}" for group_size, weight in sorted(profile.group_size_weights.items())
+    )
+    lines = [
+        f"Model: {_friendly_model_name(model.name)}",
+        f"Queue style: {model.queue_type.replace('_', ' ')}",
+        f"Seating strategy: {model.strategy_name.replace('_', ' ')}",
+        f"Group size range: {profile.min_group_size} to {profile.max_group_size} guests",
+        f"Dining duration range: {profile.min_dining_duration} to {profile.max_dining_duration} minutes",
+        f"Patience settings: mean {model.patience_threshold_mean:.0f} minutes, "
+        f"standard deviation {model.patience_threshold_sd:.0f} minutes",
+        f"Tables: {table_text}",
+        f"Group-size weighting: {weight_text}",
+        "",
+        _model_summary(model),
+    ]
+    return "\n".join(lines)
+
+
+def _format_stat_line(label: str, value: str) -> str:
+    if label == "table_utilization_rate":
+        return f"Table utilization: {float(value) * 100:.1f}%"
+
+    if label == "simulation_end_time":
+        return f"Simulation end time: {value} minutes"
+
+    if label.startswith("average_wait_group_size_"):
+        group_size = label.rsplit("_", 1)[-1]
+        return f"Average wait for group size {group_size}: {value} minutes"
+
+    label_map = {
+        "served_groups": "Groups served",
+        "rejected_groups": "Groups rejected",
+        "total_groups": "Total groups",
+        "average_wait_time": "Average wait time",
+        "min_wait_time": "Minimum wait time",
+        "max_wait_time": "Maximum wait time",
+        "longest_queue_length": "Maximum queue length",
+        "shortest_queue_length": "Minimum queue length",
+    }
+    friendly = label_map.get(label, label.replace("_", " ").capitalize())
+    if "wait" in label:
+        return f"{friendly}: {value} minutes"
+    return f"{friendly}: {value}"
+
+
+def _format_statistics_text(result) -> str:
+    lines: list[str] = []
+    for raw_line in result.statistics.to_pretty_text().splitlines():
+        if "=" not in raw_line:
+            lines.append(raw_line)
+            continue
+        label, value = raw_line.split("=", 1)
+        lines.append(_format_stat_line(label, value))
+    return "\n".join(lines)
+
+
+def _format_scenario_text(scenario: Scenario) -> str:
+    lines = [
+        f"Model: {_friendly_model_name(scenario.business_model_name)}",
+        f"Queue style: {scenario.queue_type.replace('_', ' ')}",
+        f"Seating strategy: {scenario.strategy_name.replace('_', ' ')}",
+        "Tables: " + ", ".join(f"{table.count} x {table.seats}-seat" for table in scenario.tables),
+        "",
+        "Arrivals:",
+    ]
+    for row in scenario.arrivals:
+        patience_text = (
+            f"{row.patience_override} minutes" if row.patience_override is not None else "automatic"
+        )
+        lines.append(
+            f"- At {row.arrival_time} minutes: group of {row.group_size}, "
+            f"dining for {row.dining_duration} minutes, patience {patience_text}"
+        )
+    return "\n".join(lines)
+
+
 def _parse_tables(raw: str) -> list[TableInventory]:
     tables: list[TableInventory] = []
     for token in [entry.strip() for entry in raw.split(",") if entry.strip()]:
@@ -180,17 +275,25 @@ class Layer1Widget(QWidget):
         self.models = get_builtin_models()
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(28, 18, 28, 24)
+        layout.setSpacing(14)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         title = QLabel("Choose Restaurant Configuration")
         title.setProperty("title", True)
+        title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(title)
 
         grid = QGridLayout()
+        grid.setHorizontalSpacing(18)
+        grid.setVerticalSpacing(14)
+        grid.setContentsMargins(12, 4, 12, 0)
         ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck"]
         for idx, key in enumerate(ordered):
             model = self.models[key]
-            card = QGroupBox(model.name.replace("_", " ").title())
+            card = QGroupBox(_friendly_model_name(model.name))
             card_layout = QVBoxLayout(card)
-            info = QLabel(model.notes)
+            card_layout.setSpacing(10)
+            info = QLabel(_model_summary(model))
             info.setWordWrap(True)
             card_layout.addWidget(info)
             view_btn = QPushButton("View Parameters")
@@ -203,7 +306,10 @@ class Layer1Widget(QWidget):
 
         custom_card = QGroupBox("Customize Restaurant")
         custom_layout = QVBoxLayout(custom_card)
-        custom_layout.addWidget(QLabel("Build your own parameter set."))
+        custom_layout.setSpacing(10)
+        custom_text = QLabel("Create a tailored restaurant setup with your own seating and timing rules.")
+        custom_text.setWordWrap(True)
+        custom_layout.addWidget(custom_text)
         custom_btn = QPushButton("Select")
         custom_btn.clicked.connect(self._customize)
         custom_layout.addWidget(custom_btn)
@@ -218,16 +324,7 @@ class Layer1Widget(QWidget):
         layout.addLayout(load_row)
 
     def _view_model(self, model: BusinessModel) -> None:
-        profile = model.generator_profile
-        details = (
-            f"Name: {model.name}\nQueue Type: {model.queue_type}\nStrategy: {model.strategy_name}\n"
-            f"Group Size: {profile.min_group_size}-{profile.max_group_size}\n"
-            f"Dining Duration: {profile.min_dining_duration}-{profile.max_dining_duration}\n"
-            f"Weights: {profile.group_size_weights}\n"
-            f"Patience: mean={model.patience_threshold_mean}, sd={model.patience_threshold_sd}\n"
-            f"Tables: {[f'{t.seats}x{t.count}' for t in model.tables]}"
-        )
-        QMessageBox.information(self, "Model Parameters", details)
+        QMessageBox.information(self, "Model Parameters", _format_model_details(model))
 
     def _customize(self) -> None:
         dialog = CustomModelDialog(self)
@@ -261,8 +358,12 @@ class Layer2Widget(QWidget):
         self._is_sorting = False
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(28, 18, 28, 24)
+        layout.setSpacing(14)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         header = QLabel("Build Queue")
         header.setProperty("title", True)
+        header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(header)
 
         controls = QHBoxLayout()
@@ -282,7 +383,14 @@ class Layer2Widget(QWidget):
         layout.addLayout(controls)
 
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Arrival Time", "Group Size", "Dining Duration", "Patience"])
+        self.table.setHorizontalHeaderLabels(
+            [
+                "Arrival Time (minutes)",
+                "Group Size (guests)",
+                "Dining Duration (minutes)",
+                "Patience (minutes)",
+            ]
+        )
         self.table.itemChanged.connect(self._sort_by_arrival)
         layout.addWidget(self.table)
 
@@ -296,14 +404,19 @@ class Layer2Widget(QWidget):
         self._populate_from_scenario(loaded_scenario.arrivals if loaded_scenario else [])
 
     def _populate_from_scenario(self, arrivals) -> None:
-        self.table.setRowCount(0)
-        for arrival in arrivals:
-            self._add_row(
-                arrival.arrival_time,
-                arrival.group_size,
-                arrival.dining_duration,
-                arrival.patience_override,
-            )
+        self.table.blockSignals(True)
+        try:
+            self.table.setRowCount(0)
+            for arrival in arrivals:
+                self._add_row(
+                    arrival.arrival_time,
+                    arrival.group_size,
+                    arrival.dining_duration,
+                    arrival.patience_override,
+                )
+        finally:
+            self.table.blockSignals(False)
+        self._sort_by_arrival()
 
     def _read_rows(self) -> list[QueueRowInput]:
         rows: list[QueueRowInput] = []
@@ -365,7 +478,7 @@ class Layer2Widget(QWidget):
         dining_duration: int | None = None,
         patience_override: int | None = None,
     ) -> None:
-        if self.table.rowCount() > MAX_QUEUE_LENGTH:
+        if self.table.rowCount() >= MAX_QUEUE_LENGTH:
             QMessageBox.warning(self, "Queue Limit", f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
             return
         row = self.table.rowCount()
@@ -421,8 +534,12 @@ class Layer3Widget(QWidget):
         self.result = None
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(28, 18, 28, 24)
+        layout.setSpacing(14)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         header = QLabel("Simulation Results")
         header.setProperty("title", True)
+        header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(header)
 
         controls = QHBoxLayout()
@@ -451,20 +568,8 @@ class Layer3Widget(QWidget):
     def set_result(self, scenario: Scenario, result) -> None:
         self.scenario = scenario
         self.result = result
-        self.stats_text.setPlainText(result.statistics.to_pretty_text())
-        lines = [
-            f"model={scenario.business_model_name}",
-            f"queue_type={scenario.queue_type}",
-            f"strategy={scenario.strategy_name}",
-            "tables=" + ", ".join(f"{table.seats}:{table.count}" for table in scenario.tables),
-            "arrivals:",
-        ]
-        for row in scenario.arrivals:
-            lines.append(
-                f"- t={row.arrival_time}, size={row.group_size}, "
-                f"duration={row.dining_duration}, patience={row.patience_override}"
-            )
-        self.scenario_text.setPlainText("\n".join(lines))
+        self.stats_text.setPlainText(_format_statistics_text(result))
+        self.scenario_text.setPlainText(_format_scenario_text(scenario))
 
     def _toggle_sidebar(self) -> None:
         self.scenario_text.setVisible(not self.scenario_text.isVisible())
@@ -539,29 +644,45 @@ def apply_theme(app: QApplication) -> None:
     app.setStyleSheet(
         """
         QWidget {
-            background-color: #f1f1ee;
+            background-color: #f8f8f4;
             color: #242424;
+            font-family: "Times New Roman", "Times", "Georgia", serif;
             font-size: 13px;
         }
         QLabel[title="true"] {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 600;
-            padding: 4px 0 8px 0;
+            padding: 0 0 2px 0;
         }
         QGroupBox {
-            border: 1px solid #d0d0cc;
+            background-color: #fcfcf9;
+            border: 1px solid #d7d7d2;
             border-radius: 6px;
-            margin-top: 8px;
+            margin-top: 4px;
             padding: 10px;
         }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 4px;
+        }
         QPushButton {
-            background-color: #ebebe6;
-            border: 1px solid #c7c7c2;
+            background-color: #f1f0eb;
+            border: 1px solid #c9c8c2;
             border-radius: 4px;
             padding: 6px 10px;
         }
         QPushButton:hover {
-            background-color: #e1e1dc;
+            background-color: #e8e7e1;
+        }
+        QPlainTextEdit, QLineEdit, QSpinBox, QTableWidget {
+            background-color: #fffefb;
+            border: 1px solid #d7d7d2;
+        }
+        QHeaderView::section {
+            background-color: #efeee8;
+            border: 1px solid #d7d7d2;
+            padding: 4px;
         }
         """
     )
