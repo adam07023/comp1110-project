@@ -42,3 +42,71 @@ class JsonFormatTests(unittest.TestCase):
         self.assertEqual(loaded.patience_threshold_sd, scenario.patience_threshold_sd)
         self.assertEqual(loaded.seed, scenario.seed)
         self.assertEqual(loaded.generated, scenario.generated)
+
+    def test_nested_business_model_json_loads_new_fields(self) -> None:
+        payload = """
+{
+  "business_model": {
+    "name": "casual_dining",
+    "queue_type": "single_queue",
+    "strategy": "fifo_fit",
+    "tables": [{"seats": 2, "count": 1}],
+    "servers": 2,
+    "ordering_type": "hybrid",
+    "counter_order_time_min": 1,
+    "counter_order_time_max": 3,
+    "counter_order_time_mean": 2,
+    "counter_order_time_sd": 0.5,
+    "kiosks": 1,
+    "kiosk_usage_percent": 0.4,
+    "kiosk_order_time_min": 1,
+    "kiosk_order_time_max": 2,
+    "kiosk_order_time_mean": 1.5,
+    "kiosk_order_time_sd": 0.25,
+    "reservation_policy": "hybrid_allocation",
+    "reserved_table_percent": 1.0,
+    "reservation_hold_before_min": 5,
+    "reservation_hold_after_min": 5,
+    "patience_threshold_mean": 24.0,
+    "patience_threshold_sd": 8.0
+  },
+  "seed": 42,
+  "arrivals": [
+    {
+      "arrival_time": 5,
+      "group_size": 2,
+      "dining_duration": 48,
+      "patience": 30,
+      "is_reservation": true,
+      "scheduled_time": 5
+    }
+  ]
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "scenario.json"
+            target.write_text(payload, encoding="utf-8")
+            loaded = load_scenario_json(target)
+
+        self.assertEqual(loaded.business_model_name, "casual_dining")
+        self.assertEqual(loaded.ordering_type, "hybrid")
+        self.assertEqual(loaded.kiosks, 1)
+        self.assertEqual(loaded.reservation_policy, "hybrid_allocation")
+        self.assertTrue(loaded.arrivals[0].is_reservation)
+        self.assertEqual(loaded.arrivals[0].scheduled_time, 5)
+
+    def test_bad_json_reports_value_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "bad.json"
+            target.write_text("{not valid json", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "Invalid JSON syntax"):
+                load_scenario_json(target)
+
+    def test_json_must_be_an_object(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "bad.json"
+            target.write_text("[]", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "must be an object"):
+                load_scenario_json(target)

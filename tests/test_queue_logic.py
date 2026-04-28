@@ -44,3 +44,21 @@ class QueueLogicTests(unittest.TestCase):
 
         sampled = cli_sample_arrival_count("fast_food", DummyRng())
         self.assertEqual(sampled, 1)
+
+    def test_validate_queue_rows_preserves_reservation_fields(self) -> None:
+        model = get_builtin_models()["fast_food"]
+        arrivals = cli_validate_queue_rows(
+            [
+                QueueRowInput(
+                    arrival_time=5,
+                    group_size=2,
+                    dining_duration=12,
+                    is_reservation=True,
+                    scheduled_time=5,
+                )
+            ],
+            model,
+        )
+
+        self.assertTrue(arrivals[0].is_reservation)
+        self.assertEqual(arrivals[0].scheduled_time, 5)

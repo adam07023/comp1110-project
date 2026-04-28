@@ -20,13 +20,15 @@ def write_result_file(path: Path, result: SimulationResult) -> None:
         [
             "",
             "[arrivals]",
-            "# arrival_time, group_size, dining_duration, patience_override",
+            "# arrival_time, group_size, dining_duration, patience, is_reservation, scheduled_time",
         ]
     )
     lines.extend(
         (
             f"{arrival.arrival_time},{arrival.group_size},{arrival.dining_duration},"
-            f"{'' if arrival.patience_override is None else arrival.patience_override}"
+            f"{'' if arrival.patience_override is None else arrival.patience_override},"
+            f"{str(arrival.is_reservation).lower()},"
+            f"{'' if arrival.scheduled_time is None else arrival.scheduled_time}"
         )
         for arrival in result.scenario.arrivals
     )
@@ -47,13 +49,14 @@ def write_result_file(path: Path, result: SimulationResult) -> None:
         [
             "",
             "[event_log]",
-            "# timestamp, event_type, group_id, table_id, queue_size, message",
+            "# timestamp, event_type, group_id, table_id, queue_size, message, metadata",
         ]
     )
     for event in result.events:
+        metadata = ";".join(f"{key}={value}" for key, value in sorted(event.metadata.items()))
         lines.append(
             f"{event.timestamp},{event.event_type},{event.group_id or ''},{event.table_id or ''},"
-            f"{'' if event.queue_size is None else event.queue_size},{event.message}"
+            f"{'' if event.queue_size is None else event.queue_size},{event.message},{metadata}"
         )
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")

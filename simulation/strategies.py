@@ -23,6 +23,10 @@ def _smallest_fitting_table(entry: QueueEntry, available_tables: list[Table]) ->
     return min(candidates, key=lambda table: (table.seats, table.table_id))
 
 
+def _queue_head(entries: list[QueueEntry]) -> QueueEntry:
+    return min(entries, key=lambda item: (item.group.arrival_time, item.group.group_id))
+
+
 def choose_seating(
     strategy_name: str,
     queue_manager: BaseQueueManager,
@@ -43,11 +47,28 @@ def choose_seating(
         return None
 
     if strategy_name == "strict_fifo_fit":
-        head = min(entries, key=lambda item: (item.group.arrival_time, item.group.group_id))
+        head = _queue_head(entries)
         table = _smallest_fitting_table(head, available_tables)
         if table is None:
             return None
         return SeatingChoice(entry=head, table=table)
+
+    if strategy_name == "first_available":
+        head = _queue_head(entries)
+        table = min(available_tables, key=lambda item: item.table_id)
+        return SeatingChoice(entry=head, table=table)
+
+    if strategy_name == "exact_match":
+        for entry in sorted(entries, key=lambda item: (item.group.arrival_time, item.group.group_id)):
+            candidates = [
+                table for table in available_tables if table.seats == entry.group.group_size
+            ]
+            if candidates:
+                return SeatingChoice(
+                    entry=entry,
+                    table=min(candidates, key=lambda item: item.table_id),
+                )
+        return None
 
     if strategy_name == "smallest_table_fit":
         for table in sorted(available_tables, key=lambda item: (item.seats, item.table_id)):

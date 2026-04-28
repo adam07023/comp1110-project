@@ -68,10 +68,30 @@ def _parse_arrivals(lines: list[str]) -> list[GroupArrival]:
             if not group_id:
                 raise ValueError("Arrival group_id cannot be empty")
             patience_override = int(patience_text) if patience_text else None
+            is_reservation = False
+            scheduled_time = None
+        elif len(parts) == 7:
+            (
+                group_id,
+                arrival_time_text,
+                group_size_text,
+                dining_duration_text,
+                patience_text,
+                reservation_text,
+                scheduled_text,
+            ) = parts
+            if not group_id:
+                raise ValueError("Arrival group_id cannot be empty")
+            patience_override = int(patience_text) if patience_text else None
+            is_reservation = reservation_text.lower() in {"true", "yes", "y", "1"}
+            scheduled_time = int(scheduled_text) if scheduled_text else None
         else:
             raise ValueError(
-                "Arrival rows must contain either 3, 4, or 5 comma-separated values"
+                "Arrival rows must contain either 3, 4, 5, or 7 comma-separated values"
             )
+        if len(parts) in {3, 4}:
+            is_reservation = False
+            scheduled_time = None
         arrivals.append(
             GroupArrival(
                 group_id=group_id,
@@ -79,6 +99,8 @@ def _parse_arrivals(lines: list[str]) -> list[GroupArrival]:
                 group_size=int(group_size_text),
                 dining_duration=int(dining_duration_text),
                 patience_override=patience_override,
+                is_reservation=is_reservation,
+                scheduled_time=scheduled_time,
             )
         )
         next_group_number += 1
@@ -90,6 +112,8 @@ def load_scenario(path: Path) -> Scenario:
     business_model = _parse_key_value_lines(sections.get("business_model", []))
     queue = _parse_key_value_lines(sections.get("queue", []))
     patience = _parse_key_value_lines(sections.get("patience", []))
+    ordering = _parse_key_value_lines(sections.get("ordering", []))
+    reservations = _parse_key_value_lines(sections.get("reservations", []))
     seed = _parse_key_value_lines(sections.get("seed", []))
     if "name" not in business_model:
         raise ValueError("Scenario must define business_model name")
@@ -121,6 +145,22 @@ def load_scenario(path: Path) -> Scenario:
         patience_threshold_sd=sd_threshold,
         seed=int(seed["value"]) if seed.get("value") else None,
         generated=seed.get("generated", "false").lower() == "true",
+        servers=int(ordering.get("servers", builtin_model.servers if builtin_model else 1)),
+        ordering_type=ordering.get("type", builtin_model.ordering_type if builtin_model else "counter_only"),
+        counter_order_time_min=int(ordering.get("counter_min", builtin_model.counter_order_time_min if builtin_model else 0)),
+        counter_order_time_max=int(ordering.get("counter_max", builtin_model.counter_order_time_max if builtin_model else 0)),
+        counter_order_time_mean=float(ordering.get("counter_mean", builtin_model.counter_order_time_mean if builtin_model else 0.0)),
+        counter_order_time_sd=float(ordering.get("counter_sd", builtin_model.counter_order_time_sd if builtin_model else 0.0)),
+        kiosks=int(ordering.get("kiosks", builtin_model.kiosks if builtin_model else 0)),
+        kiosk_usage_percent=float(ordering.get("kiosk_usage_percent", builtin_model.kiosk_usage_percent if builtin_model else 0.0)),
+        kiosk_order_time_min=int(ordering.get("kiosk_min", builtin_model.kiosk_order_time_min if builtin_model else 0)),
+        kiosk_order_time_max=int(ordering.get("kiosk_max", builtin_model.kiosk_order_time_max if builtin_model else 0)),
+        kiosk_order_time_mean=float(ordering.get("kiosk_mean", builtin_model.kiosk_order_time_mean if builtin_model else 0.0)),
+        kiosk_order_time_sd=float(ordering.get("kiosk_sd", builtin_model.kiosk_order_time_sd if builtin_model else 0.0)),
+        reservation_policy=reservations.get("policy", builtin_model.reservation_policy if builtin_model else "none"),
+        reserved_table_percent=float(reservations.get("reserved_table_percent", builtin_model.reserved_table_percent if builtin_model else 0.0)),
+        reservation_hold_before_min=int(reservations.get("hold_before_min", builtin_model.reservation_hold_before_min if builtin_model else 0)),
+        reservation_hold_after_min=int(reservations.get("hold_after_min", builtin_model.reservation_hold_after_min if builtin_model else 0)),
     )
     validate_scenario(scenario)
     return scenario

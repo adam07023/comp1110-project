@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import random
+from html import escape
 from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialogButtonBox,
     QDialog,
     QFileDialog,
     QFormLayout,
@@ -18,12 +20,13 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QComboBox,
     QPlainTextEdit,
-    QSpinBox,
     QSplitter,
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -54,6 +57,7 @@ def _model_summary(model: BusinessModel) -> str:
         "casual_dining": "A balanced room with mixed party sizes and moderate dining times.",
         "cafe": "Mostly small groups, shorter stays, and efficient use of compact seating.",
         "food_truck": "Single-order service with strict first-come, first-served progression.",
+        "ramen_bar": "Counter-heavy seating for mostly solo diners and pairs.",
     }
     return summaries.get(model.name, model.notes or "Custom restaurant configuration.")
 
@@ -64,20 +68,37 @@ def _format_model_details(model: BusinessModel) -> str:
     weight_text = ", ".join(
         f"{group_size} guest(s): {weight:.2f}" for group_size, weight in sorted(profile.group_size_weights.items())
     )
-    lines = [
-        f"Model: {_friendly_model_name(model.name)}",
-        f"Queue style: {model.queue_type.replace('_', ' ')}",
-        f"Seating strategy: {model.strategy_name.replace('_', ' ')}",
-        f"Group size range: {profile.min_group_size} to {profile.max_group_size} guests",
-        f"Dining duration range: {profile.min_dining_duration} to {profile.max_dining_duration} minutes",
-        f"Patience settings: mean {model.patience_threshold_mean:.0f} minutes, "
-        f"standard deviation {model.patience_threshold_sd:.0f} minutes",
-        f"Tables: {table_text}",
-        f"Group-size weighting: {weight_text}",
-        "",
-        _model_summary(model),
+    rows = [
+        ("Model", _friendly_model_name(model.name)),
+        ("Queue Type", model.queue_type.replace("_", " ")),
+        ("Seating Strategy", model.strategy_name.replace("_", " ")),
+        ("Arrival Pattern", model.arrival_pattern.replace("_", " ")),
+        ("Group Size Range", f"{profile.min_group_size} to {profile.max_group_size} guests"),
+        (
+            "Dining Duration Range",
+            f"{profile.min_dining_duration} to {profile.max_dining_duration} minutes",
+        ),
+        (
+            "Patience Settings",
+            f"mean {model.patience_threshold_mean:.0f} minutes, "
+            f"standard deviation {model.patience_threshold_sd:.0f} minutes",
+        ),
+        ("Ordering", f"{model.ordering_type.replace('_', ' ')}, servers {model.servers}, kiosks {model.kiosks}"),
+        ("Counter Order Time", f"{model.counter_order_time_min} to {model.counter_order_time_max} minutes"),
+        ("Reservation Policy", model.reservation_policy.replace("_", " ")),
+        ("Tables", table_text),
+        ("Group-Size Weighting", weight_text),
     ]
-    return "\n".join(lines)
+    detail_rows = "".join(
+        f"<p style='margin: 0 0 12px 0;'><b>{escape(label)}</b>: {escape(value)}</p>"
+        for label, value in rows
+    )
+    return (
+        "<div style='font-size: 14px; line-height: 1.35;'>"
+        f"{detail_rows}"
+        f"<p style='margin: 16px 0 0 0;'>{escape(_model_summary(model))}</p>"
+        "</div>"
+    )
 
 
 def _format_stat_line(label: str, value: str) -> str:
@@ -87,9 +108,21 @@ def _format_stat_line(label: str, value: str) -> str:
     if label == "simulation_end_time":
         return f"Simulation end time: {value} minutes"
 
+    if label in {"server_utilization_rate", "kiosk_utilization_rate"}:
+        friendly = label.replace("_", " ").capitalize()
+        return f"{friendly}: {float(value) * 100:.1f}%"
+
     if label.startswith("average_wait_group_size_"):
         group_size = label.rsplit("_", 1)[-1]
         return f"Average wait for group size {group_size}: {value} minutes"
+
+    if label.startswith("average_ordering_wait_group_size_"):
+        group_size = label.rsplit("_", 1)[-1]
+        return f"Average ordering wait for group size {group_size}: {value} minutes"
+
+    if label.startswith("average_seating_wait_group_size_"):
+        group_size = label.rsplit("_", 1)[-1]
+        return f"Average seating wait for group size {group_size}: {value} minutes"
 
     label_map = {
         "served_groups": "Groups served",
@@ -100,6 +133,13 @@ def _format_stat_line(label: str, value: str) -> str:
         "max_wait_time": "Maximum wait time",
         "longest_queue_length": "Maximum queue length",
         "shortest_queue_length": "Minimum queue length",
+        "average_ordering_wait_time": "Average ordering wait time",
+        "average_seating_wait_time": "Average seating wait time",
+        "abandoned_at_ordering": "Abandoned during ordering",
+        "abandoned_at_seating": "Abandoned during seating",
+        "reservation_groups_served": "Reservation groups served",
+        "reservation_no_shows": "Reservation no-shows",
+        "reservation_tables_released": "Reservation tables released",
     }
     friendly = label_map.get(label, label.replace("_", " ").capitalize())
     if "wait" in label:
@@ -108,13 +148,64 @@ def _format_stat_line(label: str, value: str) -> str:
 
 
 def _format_statistics_text(result) -> str:
-    lines: list[str] = []
+    stat_lines: dict[str, str] = {}
     for raw_line in result.statistics.to_pretty_text().splitlines():
         if "=" not in raw_line:
-            lines.append(raw_line)
             continue
         label, value = raw_line.split("=", 1)
-        lines.append(_format_stat_line(label, value))
+        stat_lines[label] = _format_stat_line(label, value)
+
+    lines: list[str] = []
+
+    def add_section(title: str, keys: list[str]) -> None:
+        section_lines = [stat_lines[key] for key in keys if key in stat_lines]
+        if not section_lines:
+            return
+        if lines:
+            lines.append("")
+        lines.append(title)
+        lines.append("-" * len(title))
+        lines.extend(section_lines)
+
+    add_section(
+        "Overview",
+        ["total_groups", "served_groups", "rejected_groups", "simulation_end_time"],
+    )
+    add_section(
+        "Wait Times",
+        ["average_wait_time", "min_wait_time", "max_wait_time"],
+    )
+    add_section(
+        "Queue And Capacity",
+        ["longest_queue_length", "shortest_queue_length", "table_utilization_rate"],
+    )
+    add_section(
+        "Ordering And Seating",
+        [
+            "average_ordering_wait_time",
+            "average_seating_wait_time",
+            "server_utilization_rate",
+            "kiosk_utilization_rate",
+            "abandoned_at_ordering",
+            "abandoned_at_seating",
+        ],
+    )
+    add_section(
+        "Reservations",
+        ["reservation_groups_served", "reservation_no_shows", "reservation_tables_released"],
+    )
+    add_section(
+        "Wait Times By Group Size",
+        [key for key in sorted(stat_lines) if key.startswith("average_wait_group_size_")],
+    )
+    add_section(
+        "Ordering Wait By Group Size",
+        [key for key in sorted(stat_lines) if key.startswith("average_ordering_wait_group_size_")],
+    )
+    add_section(
+        "Seating Wait By Group Size",
+        [key for key in sorted(stat_lines) if key.startswith("average_seating_wait_group_size_")],
+    )
     return "\n".join(lines)
 
 
@@ -131,9 +222,12 @@ def _format_scenario_text(scenario: Scenario) -> str:
         patience_text = (
             f"{row.patience_override} minutes" if row.patience_override is not None else "automatic"
         )
+        reservation_text = (
+            f", reservation at {row.scheduled_time} minutes" if row.is_reservation else ""
+        )
         lines.append(
             f"- At {row.arrival_time} minutes: group of {row.group_size}, "
-            f"dining for {row.dining_duration} minutes, patience {patience_text}"
+            f"dining for {row.dining_duration} minutes, patience {patience_text}{reservation_text}"
         )
     return "\n".join(lines)
 
@@ -173,43 +267,102 @@ class CustomModelDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Custom Restaurant Parameters")
         self.setModal(True)
+        self.resize(1050, 560)
 
         self.name_input = QLineEdit()
-        self.min_group_input = QSpinBox()
-        self.max_group_input = QSpinBox()
-        self.min_dining_input = QSpinBox()
-        self.max_dining_input = QSpinBox()
+        self.min_group_input = QLineEdit("1")
+        self.max_group_input = QLineEdit("4")
+        self.min_dining_input = QLineEdit("10")
+        self.max_dining_input = QLineEdit("60")
+        self.dining_mean_input = QLineEdit("35")
+        self.dining_sd_input = QLineEdit("10")
         self.patience_mean_input = QLineEdit("20")
         self.patience_sd_input = QLineEdit("6")
-        self.queue_type_input = QLineEdit("single_queue")
-        self.strategy_input = QLineEdit("fifo_fit")
+        self.queue_type_input = self._combo(["single_queue", "queue_by_group_size"])
+        self.strategy_input = self._combo(
+            [
+                "fifo_fit",
+                "best_fit",
+                "smallest_table_fit",
+                "strict_fifo_fit",
+                "first_available",
+                "exact_match",
+            ]
+        )
+        self.arrival_pattern_input = self._combo(
+            [
+                "steady",
+                "fast_service_rush",
+                "fine_dining_peak",
+                "balanced_meal_service",
+                "cafe_peaks",
+                "food_truck_rush",
+                "ramen_evening",
+            ]
+        )
         self.tables_input = QLineEdit("2:4,4:4")
         self.weights_input = QLineEdit("1:0.3,2:0.3,3:0.2,4:0.2")
-
-        for spin in (self.min_group_input, self.max_group_input):
-            spin.setRange(1, 20)
-        for spin in (self.min_dining_input, self.max_dining_input):
-            spin.setRange(1, 500)
-
-        self.min_group_input.setValue(1)
-        self.max_group_input.setValue(4)
-        self.min_dining_input.setValue(10)
-        self.max_dining_input.setValue(60)
+        self.servers_input = QLineEdit("1")
+        self.ordering_type_input = self._combo(["counter_only", "hybrid"])
+        self.counter_min_input = QLineEdit("0")
+        self.counter_max_input = QLineEdit("4")
+        self.counter_mean_input = QLineEdit("2")
+        self.counter_sd_input = QLineEdit("0.8")
+        self.kiosks_input = QLineEdit("0")
+        self.kiosk_usage_input = QLineEdit("0")
+        self.kiosk_min_input = QLineEdit("0")
+        self.kiosk_max_input = QLineEdit("0")
+        self.kiosk_mean_input = QLineEdit("0")
+        self.kiosk_sd_input = QLineEdit("0")
+        self.reservation_policy_input = self._combo(["none", "hybrid_allocation"])
+        self.reserved_percent_input = QLineEdit("0")
+        self.hold_before_input = QLineEdit("0")
+        self.hold_after_input = QLineEdit("0")
 
         layout = QVBoxLayout(self)
-        form = QFormLayout()
-        form.addRow("Model Name", self.name_input)
-        form.addRow("Min Group Size", self.min_group_input)
-        form.addRow("Max Group Size", self.max_group_input)
-        form.addRow("Group Weights (size:weight,...)", self.weights_input)
-        form.addRow("Min Dining Duration", self.min_dining_input)
-        form.addRow("Max Dining Duration", self.max_dining_input)
-        form.addRow("Patience Mean", self.patience_mean_input)
-        form.addRow("Patience SD", self.patience_sd_input)
-        form.addRow("Queue Type", self.queue_type_input)
-        form.addRow("Strategy", self.strategy_input)
-        form.addRow("Tables (seats:count,...)", self.tables_input)
-        layout.addLayout(form)
+        columns = QHBoxLayout()
+        columns.setSpacing(18)
+
+        profile_group, profile_form = self._group_form("Profile")
+        profile_form.addRow("Model Name", self.name_input)
+        profile_form.addRow("Queue Type", self.queue_type_input)
+        profile_form.addRow("Strategy", self.strategy_input)
+        profile_form.addRow("Arrival Pattern", self.arrival_pattern_input)
+        profile_form.addRow("Tables (seats:count,...)", self.tables_input)
+        profile_form.addRow("Group Weights (size:weight,...)", self.weights_input)
+        columns.addWidget(profile_group)
+
+        timing_group, timing_form = self._group_form("Timing")
+        timing_form.addRow("Min Group Size", self.min_group_input)
+        timing_form.addRow("Max Group Size", self.max_group_input)
+        timing_form.addRow("Min Dining Duration", self.min_dining_input)
+        timing_form.addRow("Max Dining Duration", self.max_dining_input)
+        timing_form.addRow("Dining Duration Mean", self.dining_mean_input)
+        timing_form.addRow("Dining Duration SD", self.dining_sd_input)
+        timing_form.addRow("Patience Mean", self.patience_mean_input)
+        timing_form.addRow("Patience SD", self.patience_sd_input)
+        columns.addWidget(timing_group)
+
+        service_group, service_form = self._group_form("Ordering And Reservations")
+        service_form.addRow("Servers", self.servers_input)
+        service_form.addRow("Ordering Type", self.ordering_type_input)
+        service_form.addRow("Counter Order Min", self.counter_min_input)
+        service_form.addRow("Counter Order Max", self.counter_max_input)
+        service_form.addRow("Counter Order Mean", self.counter_mean_input)
+        service_form.addRow("Counter Order SD", self.counter_sd_input)
+        service_form.addRow("Kiosks", self.kiosks_input)
+        service_form.addRow("Kiosk Usage Percent", self.kiosk_usage_input)
+        service_form.addRow("Kiosk Order Min", self.kiosk_min_input)
+        service_form.addRow("Kiosk Order Max", self.kiosk_max_input)
+        service_form.addRow("Kiosk Order Mean", self.kiosk_mean_input)
+        service_form.addRow("Kiosk Order SD", self.kiosk_sd_input)
+        service_form.addRow("Reservation Policy", self.reservation_policy_input)
+        service_form.addRow("Reserved Table Percent", self.reserved_percent_input)
+        service_form.addRow("Reservation Hold Before", self.hold_before_input)
+        service_form.addRow("Reservation Hold After", self.hold_after_input)
+        columns.addWidget(service_group)
+
+        layout.addLayout(columns)
 
         actions = QHBoxLayout()
         cancel = QPushButton("Cancel")
@@ -220,18 +373,30 @@ class CustomModelDialog(QDialog):
         actions.addWidget(save)
         layout.addLayout(actions)
 
+    def _combo(self, values: list[str]) -> QComboBox:
+        combo = QComboBox()
+        combo.addItems(values)
+        return combo
+
+    def _group_form(self, title: str) -> tuple[QGroupBox, QFormLayout]:
+        group = QGroupBox(title)
+        form = QFormLayout(group)
+        form.setVerticalSpacing(10)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        return group, form
+
     def build_model(self) -> BusinessModel:
         name = self.name_input.text().strip()
         if not name:
             raise ValueError("Model name is required")
 
-        min_group = self.min_group_input.value()
-        max_group = self.max_group_input.value()
+        min_group = int(self.min_group_input.text())
+        max_group = int(self.max_group_input.text())
         if min_group > max_group:
             raise ValueError("Min group size cannot exceed max group size")
 
-        min_dining = self.min_dining_input.value()
-        max_dining = self.max_dining_input.value()
+        min_dining = int(self.min_dining_input.text())
+        max_dining = int(self.max_dining_input.text())
         if min_dining > max_dining:
             raise ValueError("Min dining duration cannot exceed max dining duration")
 
@@ -244,8 +409,8 @@ class CustomModelDialog(QDialog):
 
         return BusinessModel(
             name=name,
-            queue_type=self.queue_type_input.text().strip() or "single_queue",
-            strategy_name=self.strategy_input.text().strip() or "fifo_fit",
+            queue_type=self.queue_type_input.currentText(),
+            strategy_name=self.strategy_input.currentText(),
             tables=tables,
             generator_profile=GeneratorProfile(
                 min_group_size=min_group,
@@ -253,9 +418,28 @@ class CustomModelDialog(QDialog):
                 group_size_weights=weights,
                 min_dining_duration=min_dining,
                 max_dining_duration=max_dining,
+                dining_duration_mean=float(self.dining_mean_input.text()),
+                dining_duration_sd=float(self.dining_sd_input.text()),
             ),
             patience_threshold_mean=patience_mean,
             patience_threshold_sd=patience_sd,
+            servers=int(self.servers_input.text()),
+            ordering_type=self.ordering_type_input.currentText(),
+            counter_order_time_min=int(self.counter_min_input.text()),
+            counter_order_time_max=int(self.counter_max_input.text()),
+            counter_order_time_mean=float(self.counter_mean_input.text()),
+            counter_order_time_sd=float(self.counter_sd_input.text()),
+            kiosks=int(self.kiosks_input.text()),
+            kiosk_usage_percent=float(self.kiosk_usage_input.text()),
+            kiosk_order_time_min=int(self.kiosk_min_input.text()),
+            kiosk_order_time_max=int(self.kiosk_max_input.text()),
+            kiosk_order_time_mean=float(self.kiosk_mean_input.text()),
+            kiosk_order_time_sd=float(self.kiosk_sd_input.text()),
+            reservation_policy=self.reservation_policy_input.currentText(),
+            reserved_table_percent=float(self.reserved_percent_input.text()),
+            reservation_hold_before_min=int(self.hold_before_input.text()),
+            reservation_hold_after_min=int(self.hold_after_input.text()),
+            arrival_pattern=self.arrival_pattern_input.currentText(),
             notes="Custom model created from GUI",
         )
 
@@ -287,7 +471,7 @@ class Layer1Widget(QWidget):
         grid.setHorizontalSpacing(20)
         grid.setVerticalSpacing(18)
         grid.setContentsMargins(24, 10, 24, 0)
-        ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck"]
+        ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck", "ramen_bar"]
         for idx, key in enumerate(ordered):
             model = self.models[key]
             card = QWidget()
@@ -342,7 +526,23 @@ class Layer1Widget(QWidget):
         layout.addLayout(load_row)
 
     def _view_model(self, model: BusinessModel) -> None:
-        QMessageBox.information(self, "Model Parameters", _format_model_details(model))
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Model Parameters")
+        dialog.setModal(True)
+        dialog.resize(760, 620)
+
+        layout = QVBoxLayout(dialog)
+        details = QTextBrowser(dialog)
+        details.setOpenExternalLinks(False)
+        details.setHtml(_format_model_details(model))
+        layout.addWidget(details)
+
+        actions = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, parent=dialog)
+        actions.rejected.connect(dialog.reject)
+        actions.accepted.connect(dialog.accept)
+        layout.addWidget(actions)
+
+        dialog.exec()
 
     def _customize(self) -> None:
         dialog = CustomModelDialog(self)
@@ -359,10 +559,22 @@ class Layer1Widget(QWidget):
         selected, _ = QFileDialog.getOpenFileName(self, "Load Scenario", "", "JSON Files (*.json)")
         if not selected:
             return
+        selected_path = Path(selected)
+        if selected_path.suffix.lower() != ".json":
+            QMessageBox.critical(
+                self,
+                "Bad Input",
+                "Only .json files are supported. Please choose a JSON scenario file.",
+            )
+            return
         try:
-            scenario = load_scenario_json(Path(selected))
+            scenario = load_scenario_json(selected_path)
         except Exception as error:  # noqa: BLE001
-            QMessageBox.critical(self, "Failed to Load", str(error))
+            QMessageBox.critical(
+                self,
+                "Bad Input",
+                f"This JSON file could not be processed.\n\n{error}",
+            )
             return
         self.on_scenario_loaded(scenario)
 
@@ -400,19 +612,23 @@ class Layer2Widget(QWidget):
         controls.addStretch(1)
         layout.addLayout(controls)
 
-        self.table = QTableWidget(0, 4)
+        self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(
             [
                 "Arrival Time (min)",
                 "Group Size",
                 "Dining Duration (min)",
                 "Patience (min)",
+                "Reservation",
+                "Scheduled Time",
             ]
         )
         self.table.setColumnWidth(0, 200)  # Arrival Time
         self.table.setColumnWidth(1, 200)  # Group Size
         self.table.setColumnWidth(2, 200)  # Dining Duration
         self.table.setColumnWidth(3, 200)  # Patience
+        self.table.setColumnWidth(4, 140)  # Reservation
+        self.table.setColumnWidth(5, 160)  # Scheduled Time
         self.table.itemChanged.connect(self._sort_by_arrival)
         layout.addWidget(self.table)
         self.table.setFixedHeight(600)
@@ -437,6 +653,8 @@ class Layer2Widget(QWidget):
                     arrival.group_size,
                     arrival.dining_duration,
                     arrival.patience_override,
+                    arrival.is_reservation,
+                    arrival.scheduled_time,
                 )
         finally:
             self.table.blockSignals(False)
@@ -449,17 +667,23 @@ class Layer2Widget(QWidget):
             group_item = self.table.item(index, 1)
             dining_item = self.table.item(index, 2)
             patience_item = self.table.item(index, 3)
+            reservation_item = self.table.item(index, 4)
+            scheduled_item = self.table.item(index, 5)
 
             if not arrival_item or not group_item or not dining_item:
                 raise ValueError("Arrival, group size, and dining duration are required")
 
             patience_text = patience_item.text().strip() if patience_item else ""
+            reservation_text = reservation_item.text().strip().lower() if reservation_item else ""
+            scheduled_text = scheduled_item.text().strip() if scheduled_item else ""
             rows.append(
                 QueueRowInput(
                     arrival_time=int(arrival_item.text()),
                     group_size=int(group_item.text()),
                     dining_duration=int(dining_item.text()),
                     patience_override=int(patience_text) if patience_text else None,
+                    is_reservation=reservation_text in {"true", "yes", "y", "1"},
+                    scheduled_time=int(scheduled_text) if scheduled_text else None,
                 )
             )
         return rows
@@ -479,6 +703,22 @@ class Layer2Widget(QWidget):
             patience_threshold_sd=self.model.patience_threshold_sd,
             seed=(self.loaded_scenario.seed if self.loaded_scenario else None),
             generated=(self.loaded_scenario.generated if self.loaded_scenario else False),
+            servers=self.model.servers,
+            ordering_type=self.model.ordering_type,
+            counter_order_time_min=self.model.counter_order_time_min,
+            counter_order_time_max=self.model.counter_order_time_max,
+            counter_order_time_mean=self.model.counter_order_time_mean,
+            counter_order_time_sd=self.model.counter_order_time_sd,
+            kiosks=self.model.kiosks,
+            kiosk_usage_percent=self.model.kiosk_usage_percent,
+            kiosk_order_time_min=self.model.kiosk_order_time_min,
+            kiosk_order_time_max=self.model.kiosk_order_time_max,
+            kiosk_order_time_mean=self.model.kiosk_order_time_mean,
+            kiosk_order_time_sd=self.model.kiosk_order_time_sd,
+            reservation_policy=self.model.reservation_policy,
+            reserved_table_percent=self.model.reserved_table_percent,
+            reservation_hold_before_min=self.model.reservation_hold_before_min,
+            reservation_hold_after_min=self.model.reservation_hold_after_min,
         )
 
     def _randomize(self) -> None:
@@ -501,6 +741,8 @@ class Layer2Widget(QWidget):
         group_size: int | None = None,
         dining_duration: int | None = None,
         patience_override: int | None = None,
+        is_reservation: bool = False,
+        scheduled_time: int | None = None,
     ) -> None:
         if self.table.rowCount() >= MAX_QUEUE_LENGTH:
             QMessageBox.warning(self, "Queue Limit", f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
@@ -512,6 +754,8 @@ class Layer2Widget(QWidget):
             "" if group_size is None else str(group_size),
             "" if dining_duration is None else str(dining_duration),
             "" if patience_override is None else str(patience_override),
+            "true" if is_reservation else "",
+            "" if scheduled_time is None else str(scheduled_time),
         ]
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
@@ -525,8 +769,33 @@ class Layer2Widget(QWidget):
         if self._is_sorting:
             return
         self._is_sorting = True
-        self.table.sortItems(0, Qt.SortOrder.AscendingOrder)
-        self._is_sorting = False
+        self.table.blockSignals(True)
+        try:
+            rows: list[list[str]] = []
+            for row in range(self.table.rowCount()):
+                rows.append(
+                    [
+                        self.table.item(row, column).text() if self.table.item(row, column) else ""
+                        for column in range(self.table.columnCount())
+                    ]
+                )
+
+            def arrival_key(values: list[str]) -> tuple[int, str]:
+                try:
+                    return int(values[0]), values[0]
+                except ValueError:
+                    return 10**9, values[0]
+
+            rows.sort(key=arrival_key)
+            self.table.setRowCount(0)
+            for values in rows:
+                row = self.table.rowCount()
+                self.table.insertRow(row)
+                for column, value in enumerate(values):
+                    self.table.setItem(row, column, QTableWidgetItem(value))
+        finally:
+            self.table.blockSignals(False)
+            self._is_sorting = False
 
     def _save_json(self) -> None:
         try:
@@ -585,10 +854,11 @@ class Layer3Widget(QWidget):
         self.scenario_text = QPlainTextEdit()
         self.scenario_text.setReadOnly(True)
         self.scenario_text.hide()
+        self.stats_text.setMinimumHeight(520)
+        self.scenario_text.setMinimumHeight(520)
         self.splitter.addWidget(self.stats_text)
         self.splitter.addWidget(self.scenario_text)
-        layout.addWidget(self.splitter)
-        layout.addStretch(1)
+        layout.addWidget(self.splitter, 1)
 
     def set_result(self, scenario: Scenario, result) -> None:
         self.scenario = scenario
@@ -613,7 +883,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Restaurant Queue Simulator")
-        self.resize(1100, 700)
+        self.resize(1200, 850)
 
         self.state = AppState()
         self.stack = QStackedWidget()
@@ -649,6 +919,22 @@ class MainWindow(QMainWindow):
                 ),
                 patience_threshold_mean=scenario.patience_threshold_mean,
                 patience_threshold_sd=scenario.patience_threshold_sd,
+                servers=scenario.servers,
+                ordering_type=scenario.ordering_type,
+                counter_order_time_min=scenario.counter_order_time_min,
+                counter_order_time_max=scenario.counter_order_time_max,
+                counter_order_time_mean=scenario.counter_order_time_mean,
+                counter_order_time_sd=scenario.counter_order_time_sd,
+                kiosks=scenario.kiosks,
+                kiosk_usage_percent=scenario.kiosk_usage_percent,
+                kiosk_order_time_min=scenario.kiosk_order_time_min,
+                kiosk_order_time_max=scenario.kiosk_order_time_max,
+                kiosk_order_time_mean=scenario.kiosk_order_time_mean,
+                kiosk_order_time_sd=scenario.kiosk_order_time_sd,
+                reservation_policy=scenario.reservation_policy,
+                reserved_table_percent=scenario.reserved_table_percent,
+                reservation_hold_before_min=scenario.reservation_hold_before_min,
+                reservation_hold_after_min=scenario.reservation_hold_after_min,
                 notes="Model reconstructed from JSON scenario",
             )
         self.state = AppState(model=model, scenario=scenario, loaded_from_json=True)
@@ -701,7 +987,7 @@ def apply_theme(app: QApplication) -> None:
         QPushButton:hover {
             background-color: #e8e7e1;
         }
-        QPlainTextEdit, QLineEdit, QSpinBox, QTableWidget {
+        QPlainTextEdit, QLineEdit, QComboBox, QTableWidget {
             background-color: #fffefb;
             border: 1px solid #d7d7d2;
             font-size: 15px;

@@ -28,7 +28,7 @@ A discrete-event restaurant queue simulator written in Python, with both a CLI a
 ## Install GUI library and Run GUI
 
 ```bash
-python3 pip install PyQt6
+python3 -m pip install PyQt6 scipy
 python3 main.py gui
 ```
 ## Run in CLI

@@ -5,6 +5,11 @@ import random
 from domain.business_model import BusinessModel
 from domain.models import GroupArrival, Scenario
 
+try:
+    from scipy.stats import truncnorm
+except ModuleNotFoundError:  # pragma: no cover - exercised only when scipy is absent.
+    truncnorm = None
+
 
 def _weighted_group_sizes(group_size_weights: dict[int, float]) -> tuple[list[int], list[float]]:
     sizes = sorted(group_size_weights)
@@ -17,7 +22,29 @@ def _sample_patience_override(business_model: BusinessModel, rng: random.Random)
         business_model.patience_threshold_mean,
         business_model.patience_threshold_sd,
     )
-    return max(1, int(round(sampled)))
+    return max(0, int(round(sampled)))
+
+
+def _sample_truncated_normal(
+    minimum: int,
+    maximum: int,
+    mean: float,
+    sd: float,
+    rng: random.Random,
+) -> int:
+    if minimum == maximum or sd == 0:
+        return int(round(min(max(mean, minimum), maximum)))
+
+    if truncnorm is not None:
+        a = (minimum - mean) / sd
+        b = (maximum - mean) / sd
+        sampled = truncnorm.ppf(rng.random(), a, b, loc=mean, scale=sd)
+        return min(maximum, max(minimum, int(round(sampled))))
+
+    while True:
+        sampled = int(round(rng.gauss(mean, sd)))
+        if minimum <= sampled <= maximum:
+            return sampled
 
 
 def _sample_dining_duration(business_model: BusinessModel, rng: random.Random) -> int:
@@ -35,10 +62,34 @@ def _sample_dining_duration(business_model: BusinessModel, rng: random.Random) -
     if sd is None:
         sd = max(1.0, (max_duration - min_duration) / 6)
 
-    while True:
-        sampled = int(round(rng.gauss(mean, sd)))
-        if min_duration <= sampled <= max_duration:
-            return sampled
+    return _sample_truncated_normal(min_duration, max_duration, mean, sd, rng)
+
+
+def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: random.Random) -> int:
+    if duration <= 0:
+        return 0
+
+    pattern = business_model.arrival_pattern
+    if pattern == "fast_service_rush":
+        # Fast food gets a dense, broad rush instead of a perfectly flat stream.
+        ratio = rng.betavariate(1.3, 1.5)
+    elif pattern == "fine_dining_peak":
+        # Fine dining tends to cluster later around dinner seating windows.
+        ratio = rng.betavariate(4.0, 2.0)
+    elif pattern == "balanced_meal_service":
+        ratio = rng.betavariate(2.2, 2.2)
+    elif pattern == "cafe_peaks":
+        # Cafes often have morning and lunch waves.
+        ratio = rng.gauss(0.28, 0.08) if rng.random() < 0.6 else rng.gauss(0.68, 0.10)
+    elif pattern == "food_truck_rush":
+        ratio = rng.gauss(0.50, 0.16)
+    elif pattern == "ramen_evening":
+        ratio = rng.gauss(0.72, 0.12)
+    else:
+        ratio = rng.random()
+
+    bounded_ratio = min(1.0, max(0.0, ratio))
+    return int(round(bounded_ratio * duration))
 
 
 def generate_random_scenario(
@@ -53,7 +104,7 @@ def generate_random_scenario(
 
     arrivals: list[GroupArrival] = []
     for index in range(arrival_count):
-        arrival_time = rng.randint(0, duration)
+        arrival_time = _sample_arrival_time(business_model, duration, rng)
         group_size = rng.choices(sizes, weights=weights, k=1)[0]
         dining_duration = _sample_dining_duration(business_model, rng)
         arrivals.append(
@@ -77,4 +128,20 @@ def generate_random_scenario(
         patience_threshold_sd=business_model.patience_threshold_sd,
         seed=seed,
         generated=generated,
+        servers=business_model.servers,
+        ordering_type=business_model.ordering_type,
+        counter_order_time_min=business_model.counter_order_time_min,
+        counter_order_time_max=business_model.counter_order_time_max,
+        counter_order_time_mean=business_model.counter_order_time_mean,
+        counter_order_time_sd=business_model.counter_order_time_sd,
+        kiosks=business_model.kiosks,
+        kiosk_usage_percent=business_model.kiosk_usage_percent,
+        kiosk_order_time_min=business_model.kiosk_order_time_min,
+        kiosk_order_time_max=business_model.kiosk_order_time_max,
+        kiosk_order_time_mean=business_model.kiosk_order_time_mean,
+        kiosk_order_time_sd=business_model.kiosk_order_time_sd,
+        reservation_policy=business_model.reservation_policy,
+        reserved_table_percent=business_model.reserved_table_percent,
+        reservation_hold_before_min=business_model.reservation_hold_before_min,
+        reservation_hold_after_min=business_model.reservation_hold_after_min,
     )

@@ -59,3 +59,95 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(result.statistics.rejected_groups, 1)
         self.assertEqual(result.rejected[0].reason, "left_due_to_patience")
         self.assertTrue(any(event.event_type == "abandonment" for event in result.events))
+
+    def test_engine_tracks_ordering_and_seating_waits(self) -> None:
+        scenario = Scenario(
+            business_model_name="test",
+            queue_type="single_queue",
+            strategy_name="fifo_fit",
+            tables=[TableInventory(seats=2, count=1)],
+            arrivals=[
+                GroupArrival(group_id="G1", arrival_time=0, group_size=2, dining_duration=10),
+                GroupArrival(group_id="G2", arrival_time=1, group_size=2, dining_duration=5),
+            ],
+            servers=1,
+            counter_order_time_min=5,
+            counter_order_time_max=5,
+            counter_order_time_mean=5,
+            counter_order_time_sd=0,
+        )
+
+        result = run_simulation(scenario)
+
+        self.assertEqual(result.statistics.served_groups, 2)
+        self.assertEqual(result.statistics.average_ordering_wait_time, 2.0)
+        self.assertEqual(result.statistics.average_seating_wait_time, 2.5)
+        self.assertTrue(any(event.event_type == "order_start" for event in result.events))
+        self.assertTrue(any(event.event_type == "order_complete" for event in result.events))
+
+    def test_engine_records_abandonment_stage(self) -> None:
+        scenario = Scenario(
+            business_model_name="test",
+            queue_type="single_queue",
+            strategy_name="fifo_fit",
+            tables=[TableInventory(seats=2, count=1)],
+            arrivals=[
+                GroupArrival(
+                    group_id="G1",
+                    arrival_time=0,
+                    group_size=2,
+                    dining_duration=10,
+                    patience_override=50,
+                ),
+                GroupArrival(
+                    group_id="G2",
+                    arrival_time=1,
+                    group_size=2,
+                    dining_duration=5,
+                    patience_override=3,
+                ),
+            ],
+            servers=1,
+            counter_order_time_min=10,
+            counter_order_time_max=10,
+            counter_order_time_mean=10,
+            counter_order_time_sd=0,
+        )
+
+        result = run_simulation(scenario)
+
+        self.assertEqual(result.statistics.abandoned_at_ordering, 1)
+        self.assertEqual(result.rejected[0].stage, "ordering")
+
+    def test_reservations_skip_ordering_stage(self) -> None:
+        scenario = Scenario(
+            business_model_name="test",
+            queue_type="single_queue",
+            strategy_name="fifo_fit",
+            tables=[TableInventory(seats=2, count=1)],
+            arrivals=[
+                GroupArrival(
+                    group_id="R1",
+                    arrival_time=3,
+                    group_size=2,
+                    dining_duration=10,
+                    is_reservation=True,
+                    scheduled_time=3,
+                )
+            ],
+            servers=1,
+            counter_order_time_min=10,
+            counter_order_time_max=10,
+            counter_order_time_mean=10,
+            counter_order_time_sd=0,
+            reservation_policy="hybrid_allocation",
+            reserved_table_percent=1.0,
+            reservation_hold_before_min=3,
+            reservation_hold_after_min=3,
+        )
+
+        result = run_simulation(scenario)
+
+        self.assertEqual(result.statistics.reservation_groups_served, 1)
+        self.assertEqual(result.seated_groups[0].order_start_time, None)
+        self.assertEqual(result.seated_groups[0].seated_time, 3)

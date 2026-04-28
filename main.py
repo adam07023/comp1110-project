@@ -22,6 +22,7 @@ ARRIVAL_COUNT_DISTRIBUTIONS: dict[str, tuple[float, float]] = {
     "casual_dining": (34.0, 8.0),
     "cafe": (22.0, 5.0),
     "food_truck": (40.0, 10.0),
+    "ramen_bar": (28.0, 6.0),
 }
 
 
@@ -31,6 +32,8 @@ class QueueRowInput:
     group_size: int
     dining_duration: int
     patience_override: int | None = None
+    is_reservation: bool = False
+    scheduled_time: int | None = None
 
 
 def get_model(model_name: str) -> BusinessModel:
@@ -215,6 +218,10 @@ def cli_validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> 
             )
         if row.patience_override is not None and row.patience_override <= 0:
             raise ValueError("Patience value must be positive when provided")
+        if row.is_reservation and row.scheduled_time is None:
+            raise ValueError("Reservation rows must include a scheduled time")
+        if row.scheduled_time is not None and row.scheduled_time < 0:
+            raise ValueError("Scheduled time cannot be negative")
 
         normalized.append(
             GroupArrival(
@@ -223,6 +230,8 @@ def cli_validate_queue_rows(rows: list[QueueRowInput], model: BusinessModel) -> 
                 group_size=row.group_size,
                 dining_duration=row.dining_duration,
                 patience_override=row.patience_override,
+                is_reservation=row.is_reservation,
+                scheduled_time=row.scheduled_time,
             )
         )
 

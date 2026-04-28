@@ -34,3 +34,35 @@ class StrategyTests(unittest.TestCase):
         )
 
         self.assertIsNone(choice)
+
+    def test_first_available_uses_queue_head_without_fit_minimisation(self) -> None:
+        queue = SingleQueueManager()
+        queue.enqueue(GroupArrival(group_id="G1", arrival_time=0, group_size=2, dining_duration=10))
+        queue.enqueue(GroupArrival(group_id="G2", arrival_time=1, group_size=4, dining_duration=10))
+
+        choice = choose_seating(
+            "first_available",
+            queue,
+            [Table(table_id="T2", seats=2), Table(table_id="T1", seats=6)],
+        )
+
+        self.assertIsNotNone(choice)
+        assert choice is not None
+        self.assertEqual(choice.entry.group.group_id, "G1")
+        self.assertEqual(choice.table.table_id, "T1")
+
+    def test_exact_match_waits_for_same_size_table(self) -> None:
+        queue = SingleQueueManager()
+        queue.enqueue(GroupArrival(group_id="G1", arrival_time=0, group_size=2, dining_duration=10))
+        queue.enqueue(GroupArrival(group_id="G2", arrival_time=1, group_size=4, dining_duration=10))
+
+        choice = choose_seating(
+            "exact_match",
+            queue,
+            [Table(table_id="T1", seats=6), Table(table_id="T2", seats=4)],
+        )
+
+        self.assertIsNotNone(choice)
+        assert choice is not None
+        self.assertEqual(choice.entry.group.group_id, "G2")
+        self.assertEqual(choice.table.table_id, "T2")
