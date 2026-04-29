@@ -70,19 +70,30 @@ def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: rand
         return 0
 
     pattern = business_model.arrival_pattern
-    if pattern == "fast_service_rush":
-        # Fast food gets a dense, broad rush instead of a perfectly flat stream.
-        ratio = rng.betavariate(1.3, 1.5)
+    if pattern == "steady":
+        # Uniform-like spread with minimal central tendency.
+        # Suitable as a neutral baseline for any service window.
+        ratio = rng.betavariate(1.1, 1.1)
+    elif pattern == "fast_service_rush":
+        # Broad spread with slight early bias. Models sustained
+        # traffic where early arrivals lead the rush.
+        ratio = rng.betavariate(1.8, 2.2)
     elif pattern == "fine_dining_peak":
-        # Fine dining tends to cluster later around dinner seating windows.
+        # Concentrated toward the later portion of the window.
+        # Models punctual reservation-driven arrivals.
         ratio = rng.betavariate(4.0, 2.0)
     elif pattern == "balanced_meal_service":
+        # Symmetric mild bell centered at midpoint. Models
+        # even spread with slight edge tapering.
         ratio = rng.betavariate(2.2, 2.2)
     elif pattern == "cafe_peaks":
-        # Cafes often have morning and lunch waves.
-        ratio = rng.gauss(0.28, 0.08) if rng.random() < 0.6 else rng.gauss(0.68, 0.10)
+        # Right-skewed, concentrated toward session start.
+        # Models early-heavy cafe traffic thinning over time.
+        ratio = rng.betavariate(2.0, 4.0)
     elif pattern == "food_truck_rush":
-        ratio = rng.gauss(0.50, 0.16)
+        # Near-uniform with minimal central tendency. Models
+        # opportunistic bursty arrivals within a short window.
+        ratio = rng.betavariate(1.3, 1.3)
     else:
         ratio = rng.random()
 

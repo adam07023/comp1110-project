@@ -374,6 +374,12 @@ class CustomModelDialog(QDialog):
     def _combo(self, values: list[str]) -> QComboBox:
         combo = QComboBox()
         combo.addItems(values)
+        longest_value = max(values, key=len)
+        popup_width = combo.fontMetrics().horizontalAdvance(longest_value) + 48
+        combo.setMinimumContentsLength(len(longest_value))
+        combo.setMinimumWidth(popup_width)
+        combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        combo.view().setMinimumWidth(popup_width)
         return combo
 
     def _group_form(self, title: str) -> tuple[QGroupBox, QFormLayout]:
