@@ -9,7 +9,7 @@ from itertools import count
 from domain.events import SimulationEvent
 from domain.models import GroupArrival, RejectedGroup, Scenario, SeatedGroup, SimulationResult
 from domain.statistics import compute_statistics
-from generation.randomizer import _sample_truncated_normal
+from generation.randomizer import _patience_bounds, _sample_truncated_normal
 from generation.validators import validate_scenario
 from simulation.allocator import expand_tables
 from simulation.queue_manager import BaseQueueManager, QueueEntry
@@ -54,8 +54,8 @@ class ListQueueManager(BaseQueueManager):
 
 
 def _sample_patience_threshold(mean: float, sd: float, rng: random.Random) -> int:
-    sampled = rng.gauss(mean, sd)
-    return max(0, int(round(sampled)))
+    minimum, maximum = _patience_bounds(mean, sd)
+    return _sample_truncated_normal(minimum=minimum, maximum=maximum, mean=mean, sd=sd, rng=rng)
 
 
 def _order_duration(scenario: Scenario, channel: str, rng: random.Random) -> int:

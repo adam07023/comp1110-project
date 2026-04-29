@@ -18,11 +18,24 @@ def _weighted_group_sizes(group_size_weights: dict[int, float]) -> tuple[list[in
 
 
 def _sample_patience_override(business_model: BusinessModel, rng: random.Random) -> int:
-    sampled = rng.gauss(
+    minimum, maximum = _patience_bounds(
         business_model.patience_threshold_mean,
         business_model.patience_threshold_sd,
     )
-    return max(0, int(round(sampled)))
+    return _sample_truncated_normal(
+        minimum=minimum,
+        maximum=maximum,
+        mean=business_model.patience_threshold_mean,
+        sd=business_model.patience_threshold_sd,
+        rng=rng,
+    )
+
+
+def _patience_bounds(mean: float, sd: float) -> tuple[int, int]:
+    spread = max(1.0, 2.0 * sd)
+    minimum = max(1, int(round(mean - spread)))
+    maximum = max(minimum, int(round(mean + spread)))
+    return minimum, maximum
 
 
 def _sample_truncated_normal(

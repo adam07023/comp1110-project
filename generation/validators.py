@@ -87,8 +87,8 @@ def validate_scenario(scenario: Scenario) -> None:
             raise ValueError(f"Group size must be positive for {arrival.group_id}")
         if arrival.dining_duration <= 0:
             raise ValueError(f"Dining duration must be positive for {arrival.group_id}")
-        if arrival.patience_override is not None and arrival.patience_override < 0:
-            raise ValueError(f"Patience override cannot be negative for {arrival.group_id}")
+        if arrival.patience_override is not None and arrival.patience_override <= 0:
+            raise ValueError(f"Patience override must be positive for {arrival.group_id}")
         if arrival.is_reservation and arrival.scheduled_time is None:
             raise ValueError(f"Reservation {arrival.group_id} must include a scheduled time")
         if arrival.scheduled_time is not None and arrival.scheduled_time < 0:
