@@ -70,30 +70,18 @@ def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: rand
         return 0
 
     pattern = business_model.arrival_pattern
-    if pattern == "steady":
-        # Uniform-like spread with minimal central tendency.
-        # Suitable as a neutral baseline for any service window.
-        ratio = rng.betavariate(1.1, 1.1)
-    elif pattern == "fast_service_rush":
-        # Broad spread with slight early bias. Models sustained
-        # traffic where early arrivals lead the rush.
-        ratio = rng.betavariate(1.8, 2.2)
-    elif pattern == "fine_dining_peak":
-        # Concentrated toward the later portion of the window.
-        # Models punctual reservation-driven arrivals.
-        ratio = rng.betavariate(4.0, 2.0)
-    elif pattern == "balanced_meal_service":
-        # Symmetric mild bell centered at midpoint. Models
-        # even spread with slight edge tapering.
-        ratio = rng.betavariate(2.2, 2.2)
-    elif pattern == "cafe_peaks":
-        # Right-skewed, concentrated toward session start.
-        # Models early-heavy cafe traffic thinning over time.
-        ratio = rng.betavariate(2.0, 4.0)
-    elif pattern == "food_truck_rush":
-        # Near-uniform with minimal central tendency. Models
-        # opportunistic bursty arrivals within a short window.
-        ratio = rng.betavariate(1.3, 1.3)
+    if pattern == "uniform":
+        # No positional bias. Every point in the window is equally likely.
+        ratio = rng.random()
+    elif pattern == "left_skewed":
+        # Arrivals concentrate toward the start of the window and thin toward the end.
+        ratio = rng.betavariate(2.0, 5.0)
+    elif pattern == "centered":
+        # Arrivals concentrate around the midpoint with tapering at both edges.
+        ratio = rng.betavariate(3.0, 3.0)
+    elif pattern == "right_skewed":
+        # Arrivals concentrate toward the later portion of the window.
+        ratio = rng.betavariate(5.0, 2.0)
     else:
         ratio = rng.random()
 

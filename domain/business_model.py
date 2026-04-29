@@ -41,5 +41,5 @@ class BusinessModel:
     reserved_table_percent: float = 0.0
     reservation_hold_before_min: int = 0
     reservation_hold_after_min: int = 0
-    arrival_pattern: str = "steady"
+    arrival_pattern: str = "uniform"
     notes: str = field(default="")

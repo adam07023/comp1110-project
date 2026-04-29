@@ -290,12 +290,10 @@ class CustomModelDialog(QDialog):
         )
         self.arrival_pattern_input = self._combo(
             [
-                "steady",
-                "fast_service_rush",
-                "fine_dining_peak",
-                "balanced_meal_service",
-                "cafe_peaks",
-                "food_truck_rush",
+                "uniform",
+                "left_skewed",
+                "centered",
+                "right_skewed",
             ]
         )
         self.tables_input = QLineEdit("2:4,4:4")
