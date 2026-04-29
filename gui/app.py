@@ -57,7 +57,6 @@ def _model_summary(model: BusinessModel) -> str:
         "casual_dining": "A balanced room with mixed party sizes and moderate dining times.",
         "cafe": "Mostly small groups, shorter stays, and efficient use of compact seating.",
         "food_truck": "Single-order service with strict first-come, first-served progression.",
-        "ramen_bar": "Counter-heavy seating for mostly solo diners and pairs.",
     }
     return summaries.get(model.name, model.notes or "Custom restaurant configuration.")
 
@@ -297,7 +296,6 @@ class CustomModelDialog(QDialog):
                 "balanced_meal_service",
                 "cafe_peaks",
                 "food_truck_rush",
-                "ramen_evening",
             ]
         )
         self.tables_input = QLineEdit("2:4,4:4")
@@ -471,7 +469,7 @@ class Layer1Widget(QWidget):
         grid.setHorizontalSpacing(20)
         grid.setVerticalSpacing(18)
         grid.setContentsMargins(24, 10, 24, 0)
-        ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck", "ramen_bar"]
+        ordered = ["fast_food", "fine_dining", "casual_dining", "cafe", "food_truck"]
         for idx, key in enumerate(ordered):
             model = self.models[key]
             card = QWidget()

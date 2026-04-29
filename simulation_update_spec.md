@@ -325,32 +325,6 @@ All six presets are updated to include the new parameters.
     notes="Single server. Order time models production time. Slot occupancy models pickup wait.",
 ),
 
-"ramen_bar": BusinessModel(
-    name="ramen_bar",
-    queue_type="single_queue",
-    strategy_name="smallest_table_fit",
-    tables=[TableInventory(seats=1, count=6), TableInventory(seats=2, count=4), TableInventory(seats=4, count=2)],
-    generator_profile=GeneratorProfile(
-        min_group_size=1,
-        max_group_size=4,
-        group_size_weights={1: 0.45, 2: 0.35, 3: 0.12, 4: 0.08},
-        min_dining_duration=30,
-        max_dining_duration=60,
-        dining_duration_mean=42,
-        dining_duration_sd=8,
-    ),
-    servers=2,
-    ordering_type="counter_only",
-    counter_order_time_min=1,
-    counter_order_time_max=4,
-    counter_order_time_mean=2,
-    counter_order_time_sd=0.7,
-    kiosks=0,
-    reservation_policy="none",
-    patience_threshold_mean=10.0,
-    patience_threshold_sd=3.0,
-    notes="Counter-heavy seating. Solo and pair dominant. No reservations.",
-),
 ```
 
 ---

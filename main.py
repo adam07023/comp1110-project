@@ -22,7 +22,6 @@ ARRIVAL_COUNT_DISTRIBUTIONS: dict[str, tuple[float, float]] = {
     "casual_dining": (34.0, 8.0),
     "cafe": (22.0, 5.0),
     "food_truck": (40.0, 10.0),
-    "ramen_bar": (28.0, 6.0),
 }
 
 

@@ -83,8 +83,6 @@ def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: rand
         ratio = rng.gauss(0.28, 0.08) if rng.random() < 0.6 else rng.gauss(0.68, 0.10)
     elif pattern == "food_truck_rush":
         ratio = rng.gauss(0.50, 0.16)
-    elif pattern == "ramen_evening":
-        ratio = rng.gauss(0.72, 0.12)
     else:
         ratio = rng.random()
 

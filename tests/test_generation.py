@@ -54,12 +54,6 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(scenario.kiosks, model.kiosks)
         self.assertEqual(scenario.kiosk_usage_percent, model.kiosk_usage_percent)
 
-    def test_ramen_bar_preset_is_available(self) -> None:
-        models = get_builtin_models()
-
-        self.assertIn("ramen_bar", models)
-        self.assertEqual(models["ramen_bar"].servers, 2)
-
     def test_generated_arrivals_are_sorted_by_arrival_time(self) -> None:
         model = get_builtin_models()["fast_food"]
         scenario = generate_random_scenario(model, seed=31, arrival_count=20, duration=120)
