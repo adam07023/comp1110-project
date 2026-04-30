@@ -25,6 +25,14 @@ EVENT_PRIORITY = {
     "arrival": 5,
 }
 
+SERVICE_LEVEL_THRESHOLDS = {
+    "fast_food": 10,
+    "fine_dining": 30,
+    "casual_dining": 20,
+    "cafe": 8,
+    "food_truck": 5,
+}
+
 
 @dataclass
 class GroupState:
@@ -58,15 +66,7 @@ def _sample_patience_threshold(mean: float, sd: float, rng: random.Random) -> in
     return _sample_truncated_normal(minimum=minimum, maximum=maximum, mean=mean, sd=sd, rng=rng)
 
 
-def _order_duration(scenario: Scenario, channel: str, rng: random.Random) -> int:
-    if channel == "kiosk":
-        return _sample_truncated_normal(
-            scenario.kiosk_order_time_min,
-            scenario.kiosk_order_time_max,
-            scenario.kiosk_order_time_mean,
-            scenario.kiosk_order_time_sd,
-            rng,
-        )
+def _order_duration(scenario: Scenario, rng: random.Random) -> int:
     return _sample_truncated_normal(
         scenario.counter_order_time_min,
         scenario.counter_order_time_max,
@@ -74,6 +74,10 @@ def _order_duration(scenario: Scenario, channel: str, rng: random.Random) -> int
         scenario.counter_order_time_sd,
         rng,
     )
+
+
+def _service_level_threshold_for_model(model_name: str) -> int:
+    return SERVICE_LEVEL_THRESHOLDS.get(model_name, 10)
 
 
 def _record_event(
@@ -102,6 +106,7 @@ def _record_event(
 def run_simulation(scenario: Scenario) -> SimulationResult:
     validate_scenario(scenario)
 
+    bypass_ordering = scenario.business_model_name == "food_truck"
     tables = expand_tables(scenario.tables)
     available_tables = {table.table_id: table for table in tables}
     held_tables: set[str] = set()
@@ -113,8 +118,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
     }
     seated_by_table: dict[str, SeatedGroup] = {}
     seating_queue = build_queue_manager(scenario.queue_type)
-    counter_queue: deque[str] = deque()
-    kiosk_queue: deque[str] = deque()
+    ordering_queue: deque[str] = deque()
     rng = random.Random(scenario.seed)
     sequence = count()
     event_queue: list[tuple[int, int, int, str, str | None, dict[str, object]]] = []
@@ -125,11 +129,10 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
     rejected: list[RejectedGroup] = []
     seated_groups: list[SeatedGroup] = []
     queue_lengths: list[int] = [0]
+    queue_length_snapshots: list[dict[str, int]] = [seating_queue.queue_lengths_by_label()]
     states: dict[str, GroupState] = {}
     server_available = scenario.servers
-    kiosk_available = scenario.kiosks
     server_busy_time = 0
-    kiosk_busy_time = 0
     reservation_tables_released = 0
     reservation_no_shows = 0
 
@@ -166,19 +169,11 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             )
 
     def total_waiting() -> int:
-        return len(counter_queue) + len(kiosk_queue) + seating_queue.size()
+        return len(ordering_queue) + seating_queue.size()
 
     def record_queue_length() -> None:
         queue_lengths.append(total_waiting())
-
-    def choose_order_channel() -> str:
-        if (
-            scenario.ordering_type == "hybrid"
-            and scenario.kiosks > 0
-            and rng.random() < scenario.kiosk_usage_percent
-        ):
-            return "kiosk"
-        return "counter"
+        queue_length_snapshots.append(seating_queue.queue_lengths_by_label())
 
     def enqueue_seating(state: GroupState, timestamp: int) -> None:
         state.status = "seating_queue"
@@ -198,50 +193,40 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             )
 
     def release_order_resource(state: GroupState, timestamp: int) -> None:
-        nonlocal server_available, kiosk_available, server_busy_time, kiosk_busy_time
-        if state.order_channel == "kiosk":
-            kiosk_available += 1
-            if state.service_start_time is not None:
-                kiosk_busy_time += max(0, timestamp - state.service_start_time)
-        else:
-            server_available += 1
-            if state.service_start_time is not None:
-                server_busy_time += max(0, timestamp - state.service_start_time)
+        nonlocal server_available, server_busy_time
+        server_available += 1
+        if state.service_start_time is not None:
+            server_busy_time += max(0, timestamp - state.service_start_time)
         state.service_start_time = None
         state.service_end_time = None
 
     def try_start_orders(timestamp: int) -> None:
-        nonlocal server_available, kiosk_available
-        for channel, queue in (("counter", counter_queue), ("kiosk", kiosk_queue)):
-            while queue and ((channel == "counter" and server_available > 0) or (channel == "kiosk" and kiosk_available > 0)):
-                group_id = queue.popleft()
-                state = states[group_id]
-                if state.status != "ordering_queue":
-                    continue
-                if state.leave_time <= timestamp:
-                    schedule(timestamp, "abandonment", group_id)
-                    continue
-                if channel == "counter":
-                    server_available -= 1
-                else:
-                    kiosk_available -= 1
-                duration = _order_duration(scenario, channel, rng)
-                state.status = "ordering_service"
-                state.order_channel = channel
-                state.order_start_time = timestamp
-                state.service_start_time = timestamp
-                state.service_end_time = timestamp + duration
-                _record_event(
-                    events,
-                    timestamp=timestamp,
-                    event_type="order_start",
-                    group_id=group_id,
-                    queue_size=total_waiting(),
-                    message=f"Group {group_id} started ordering at {channel}",
-                    order_channel=channel,
-                    order_duration=duration,
-                )
-                schedule(timestamp + duration, "order_complete", group_id)
+        nonlocal server_available
+        while ordering_queue and server_available > 0:
+            group_id = ordering_queue.popleft()
+            state = states[group_id]
+            if state.status != "ordering_queue":
+                continue
+            if state.leave_time <= timestamp:
+                schedule(timestamp, "abandonment", group_id)
+                continue
+            server_available -= 1
+            duration = _order_duration(scenario, rng)
+            state.status = "ordering_service"
+            state.order_channel = "server"
+            state.order_start_time = timestamp
+            state.service_start_time = timestamp
+            state.service_end_time = timestamp + duration
+            _record_event(
+                events,
+                timestamp=timestamp,
+                event_type="order_start",
+                group_id=group_id,
+                queue_size=total_waiting(),
+                message=f"Group {group_id} started ordering",
+                order_duration=duration,
+            )
+            schedule(timestamp + duration, "order_complete", group_id)
 
     def entries_for(reservation_status: bool) -> list[QueueEntry]:
         return [
@@ -310,9 +295,8 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             return
         stage = "ordering" if state.status.startswith("ordering") else "seating"
         if state.status == "ordering_queue":
-            queue = kiosk_queue if state.order_channel == "kiosk" else counter_queue
             try:
-                queue.remove(group_id)
+                ordering_queue.remove(group_id)
             except ValueError:
                 pass
         elif state.status == "ordering_service":
@@ -421,7 +405,6 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 group_id=group_id,
                 queue_size=total_waiting(),
                 message=f"Group {group_id} completed ordering",
-                order_channel=state.order_channel or "",
             )
             if state.leave_time <= time_cursor:
                 abandon(group_id, time_cursor)
@@ -479,17 +462,12 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 abandon(arrival.group_id, time_cursor)
                 continue
             schedule(leave_time, "abandonment", arrival.group_id)
-            if arrival.is_reservation:
+            if arrival.is_reservation or bypass_ordering:
                 enqueue_seating(state, time_cursor)
                 try_seating(time_cursor)
             else:
-                channel = choose_order_channel()
                 state.status = "ordering_queue"
-                state.order_channel = channel
-                if channel == "kiosk":
-                    kiosk_queue.append(arrival.group_id)
-                else:
-                    counter_queue.append(arrival.group_id)
+                ordering_queue.append(arrival.group_id)
                 record_queue_length()
                 try_start_orders(time_cursor)
                 try_seating(time_cursor)
@@ -500,12 +478,12 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
         rejected,
         tables,
         queue_lengths,
+        queue_length_snapshots=queue_length_snapshots,
         server_busy_time=server_busy_time,
         server_count=scenario.servers,
-        kiosk_busy_time=kiosk_busy_time,
-        kiosk_count=scenario.kiosks,
         reservation_no_shows=reservation_no_shows,
         reservation_tables_released=reservation_tables_released,
+        service_level_threshold=_service_level_threshold_for_model(scenario.business_model_name),
     )
 
     return SimulationResult(

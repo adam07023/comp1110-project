@@ -52,17 +52,10 @@ class Scenario:
     seed: int | None = None
     generated: bool = False
     servers: int = 1
-    ordering_type: str = "counter_only"
     counter_order_time_min: int = 0
     counter_order_time_max: int = 0
     counter_order_time_mean: float = 0.0
     counter_order_time_sd: float = 0.0
-    kiosks: int = 0
-    kiosk_usage_percent: float = 0.0
-    kiosk_order_time_min: int = 0
-    kiosk_order_time_max: int = 0
-    kiosk_order_time_mean: float = 0.0
-    kiosk_order_time_sd: float = 0.0
     reservation_policy: str = "none"
     reserved_table_percent: float = 0.0
     reservation_hold_before_min: int = 0
@@ -89,12 +82,12 @@ class SimulationStatistics:
     table_utilization_rate: float
     simulation_end_time: int
     average_wait_by_group_size: dict[int, float] = field(default_factory=dict)
+    service_level_threshold: int = 10
+    service_level_rate: float = 0.0
+    max_queue_length_by_queue: dict[str, int] = field(default_factory=dict)
     average_ordering_wait_time: float = 0.0
-    average_seating_wait_time: float = 0.0
     average_ordering_wait_by_group_size: dict[int, float] = field(default_factory=dict)
-    average_seating_wait_by_group_size: dict[int, float] = field(default_factory=dict)
     server_utilization_rate: float = 0.0
-    kiosk_utilization_rate: float = 0.0
     abandoned_at_ordering: int = 0
     abandoned_at_seating: int = 0
     reservation_groups_served: int = 0
@@ -113,22 +106,23 @@ class SimulationStatistics:
             f"shortest_queue_length={self.shortest_queue_length}",
             f"table_utilization_rate={self.table_utilization_rate:.4f}",
             f"simulation_end_time={self.simulation_end_time}",
+            f"service_level_threshold={self.service_level_threshold}",
+            f"service_level_rate={self.service_level_rate:.4f}",
             f"average_ordering_wait_time={self.average_ordering_wait_time:.2f}",
-            f"average_seating_wait_time={self.average_seating_wait_time:.2f}",
             f"server_utilization_rate={self.server_utilization_rate:.4f}",
-            f"kiosk_utilization_rate={self.kiosk_utilization_rate:.4f}",
             f"abandoned_at_ordering={self.abandoned_at_ordering}",
             f"abandoned_at_seating={self.abandoned_at_seating}",
             f"reservation_groups_served={self.reservation_groups_served}",
             f"reservation_no_shows={self.reservation_no_shows}",
             f"reservation_tables_released={self.reservation_tables_released}",
         ]
+        for queue_label, max_length in sorted(self.max_queue_length_by_queue.items()):
+            safe_label = queue_label.replace("+", "plus").replace("-", "_")
+            lines.append(f"max_queue_length_queue_{safe_label}={max_length}")
         for group_size, average_wait in sorted(self.average_wait_by_group_size.items()):
             lines.append(f"average_wait_group_size_{group_size}={average_wait:.2f}")
         for group_size, average_wait in sorted(self.average_ordering_wait_by_group_size.items()):
             lines.append(f"average_ordering_wait_group_size_{group_size}={average_wait:.2f}")
-        for group_size, average_wait in sorted(self.average_seating_wait_by_group_size.items()):
-            lines.append(f"average_seating_wait_group_size_{group_size}={average_wait:.2f}")
         return "\n".join(lines)
 
 

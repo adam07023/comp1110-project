@@ -30,9 +30,7 @@ class TxtFormatTests(unittest.TestCase):
         self.assertEqual(loaded.patience_threshold_sd, scenario.patience_threshold_sd)
         self.assertEqual(loaded.tables, scenario.tables)
         self.assertEqual(loaded.arrivals, scenario.arrivals)
-        self.assertEqual(loaded.ordering_type, scenario.ordering_type)
         self.assertEqual(loaded.servers, scenario.servers)
-        self.assertEqual(loaded.kiosks, scenario.kiosks)
 
     def test_scenario_round_trip_preserves_group_ids_and_patience(self) -> None:
         scenario = Scenario(

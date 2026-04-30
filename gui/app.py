@@ -82,8 +82,8 @@ def _format_model_details(model: BusinessModel) -> str:
             f"mean {model.patience_threshold_mean:.0f} minutes, "
             f"standard deviation {model.patience_threshold_sd:.0f} minutes",
         ),
-        ("Ordering", f"{model.ordering_type.replace('_', ' ')}, servers {model.servers}, kiosks {model.kiosks}"),
-        ("Counter Order Time", f"{model.counter_order_time_min} to {model.counter_order_time_max} minutes"),
+        ("Ordering Servers", str(model.servers)),
+        ("Order Time", f"{model.counter_order_time_min} to {model.counter_order_time_max} minutes"),
         ("Reservation Policy", model.reservation_policy.replace("_", " ")),
         ("Tables", table_text),
         ("Group-Size Weighting", weight_text),
@@ -104,24 +104,30 @@ def _format_stat_line(label: str, value: str) -> str:
     if label == "table_utilization_rate":
         return f"Table utilization: {float(value) * 100:.1f}%"
 
+    if label == "service_level_rate":
+        return f"Service level: {float(value) * 100:.1f}%"
+
+    if label == "service_level_threshold":
+        return f"Service level threshold: {value} minutes"
+
     if label == "simulation_end_time":
         return f"Simulation end time: {value} minutes"
 
-    if label in {"server_utilization_rate", "kiosk_utilization_rate"}:
+    if label == "server_utilization_rate":
         friendly = label.replace("_", " ").capitalize()
         return f"{friendly}: {float(value) * 100:.1f}%"
 
+    if label.startswith("max_queue_length_queue_"):
+        queue_label = label.removeprefix("max_queue_length_queue_").replace("_", "-").replace("plus", "+")
+        return f"Maximum queue length ({queue_label}): {value}"
+
     if label.startswith("average_wait_group_size_"):
         group_size = label.rsplit("_", 1)[-1]
-        return f"Average wait for group size {group_size}: {value} minutes"
+        return f"Average total wait for group size {group_size}: {value} minutes"
 
     if label.startswith("average_ordering_wait_group_size_"):
         group_size = label.rsplit("_", 1)[-1]
         return f"Average ordering wait for group size {group_size}: {value} minutes"
-
-    if label.startswith("average_seating_wait_group_size_"):
-        group_size = label.rsplit("_", 1)[-1]
-        return f"Average seating wait for group size {group_size}: {value} minutes"
 
     label_map = {
         "served_groups": "Groups served",
@@ -133,7 +139,6 @@ def _format_stat_line(label: str, value: str) -> str:
         "longest_queue_length": "Maximum queue length",
         "shortest_queue_length": "Minimum queue length",
         "average_ordering_wait_time": "Average ordering wait time",
-        "average_seating_wait_time": "Average seating wait time",
         "abandoned_at_ordering": "Abandoned during ordering",
         "abandoned_at_seating": "Abandoned during seating",
         "reservation_groups_served": "Reservation groups served",
@@ -146,7 +151,7 @@ def _format_stat_line(label: str, value: str) -> str:
     return f"{friendly}: {value}"
 
 
-def _format_statistics_text(result) -> str:
+def _build_statistics_sections(result) -> dict[str, list[str]]:
     stat_lines: dict[str, str] = {}
     for raw_line in result.statistics.to_pretty_text().splitlines():
         if "=" not in raw_line:
@@ -154,17 +159,13 @@ def _format_statistics_text(result) -> str:
         label, value = raw_line.split("=", 1)
         stat_lines[label] = _format_stat_line(label, value)
 
-    lines: list[str] = []
+    sections: dict[str, list[str]] = {}
 
     def add_section(title: str, keys: list[str]) -> None:
         section_lines = [stat_lines[key] for key in keys if key in stat_lines]
         if not section_lines:
             return
-        if lines:
-            lines.append("")
-        lines.append(title)
-        lines.append("-" * len(title))
-        lines.extend(section_lines)
+        sections[title] = section_lines
 
     add_section(
         "Overview",
@@ -176,15 +177,23 @@ def _format_statistics_text(result) -> str:
     )
     add_section(
         "Queue And Capacity",
-        ["longest_queue_length", "shortest_queue_length", "table_utilization_rate"],
+        [
+            "longest_queue_length",
+            "shortest_queue_length",
+            "table_utilization_rate",
+            "service_level_threshold",
+            "service_level_rate",
+        ],
+    )
+    add_section(
+        "Queue Length By Queue",
+        [key for key in sorted(stat_lines) if key.startswith("max_queue_length_queue_")],
     )
     add_section(
         "Ordering And Seating",
         [
             "average_ordering_wait_time",
-            "average_seating_wait_time",
             "server_utilization_rate",
-            "kiosk_utilization_rate",
             "abandoned_at_ordering",
             "abandoned_at_seating",
         ],
@@ -194,17 +203,27 @@ def _format_statistics_text(result) -> str:
         ["reservation_groups_served", "reservation_no_shows", "reservation_tables_released"],
     )
     add_section(
-        "Wait Times By Group Size",
+        "Total Wait Time By Group Size (arrival to seating)",
         [key for key in sorted(stat_lines) if key.startswith("average_wait_group_size_")],
     )
     add_section(
         "Ordering Wait By Group Size",
         [key for key in sorted(stat_lines) if key.startswith("average_ordering_wait_group_size_")],
     )
-    add_section(
-        "Seating Wait By Group Size",
-        [key for key in sorted(stat_lines) if key.startswith("average_seating_wait_group_size_")],
-    )
+    return sections
+
+
+def _format_statistics_column(sections: dict[str, list[str]], ordered_titles: list[str]) -> str:
+    lines: list[str] = []
+    for title in ordered_titles:
+        section_lines = sections.get(title)
+        if not section_lines:
+            continue
+        if lines:
+            lines.append("")
+        lines.append(title)
+        lines.append("-" * len(title))
+        lines.extend(section_lines)
     return "\n".join(lines)
 
 
@@ -299,17 +318,10 @@ class CustomModelDialog(QDialog):
         self.tables_input = QLineEdit("2:4,4:4")
         self.weights_input = QLineEdit("1:0.3,2:0.3,3:0.2,4:0.2")
         self.servers_input = QLineEdit("1")
-        self.ordering_type_input = self._combo(["counter_only", "hybrid"])
         self.counter_min_input = QLineEdit("0")
         self.counter_max_input = QLineEdit("4")
         self.counter_mean_input = QLineEdit("2")
         self.counter_sd_input = QLineEdit("0.8")
-        self.kiosks_input = QLineEdit("0")
-        self.kiosk_usage_input = QLineEdit("0")
-        self.kiosk_min_input = QLineEdit("0")
-        self.kiosk_max_input = QLineEdit("0")
-        self.kiosk_mean_input = QLineEdit("0")
-        self.kiosk_sd_input = QLineEdit("0")
         self.reservation_policy_input = self._combo(["none", "hybrid_allocation"])
         self.reserved_percent_input = QLineEdit("0")
         self.hold_before_input = QLineEdit("0")
@@ -341,17 +353,10 @@ class CustomModelDialog(QDialog):
 
         service_group, service_form = self._group_form("Ordering And Reservations")
         service_form.addRow("Servers", self.servers_input)
-        service_form.addRow("Ordering Type", self.ordering_type_input)
-        service_form.addRow("Counter Order Min", self.counter_min_input)
-        service_form.addRow("Counter Order Max", self.counter_max_input)
-        service_form.addRow("Counter Order Mean", self.counter_mean_input)
-        service_form.addRow("Counter Order SD", self.counter_sd_input)
-        service_form.addRow("Kiosks", self.kiosks_input)
-        service_form.addRow("Kiosk Usage Percent", self.kiosk_usage_input)
-        service_form.addRow("Kiosk Order Min", self.kiosk_min_input)
-        service_form.addRow("Kiosk Order Max", self.kiosk_max_input)
-        service_form.addRow("Kiosk Order Mean", self.kiosk_mean_input)
-        service_form.addRow("Kiosk Order SD", self.kiosk_sd_input)
+        service_form.addRow("Order Time Min", self.counter_min_input)
+        service_form.addRow("Order Time Max", self.counter_max_input)
+        service_form.addRow("Order Time Mean", self.counter_mean_input)
+        service_form.addRow("Order Time SD", self.counter_sd_input)
         service_form.addRow("Reservation Policy", self.reservation_policy_input)
         service_form.addRow("Reserved Table Percent", self.reserved_percent_input)
         service_form.addRow("Reservation Hold Before", self.hold_before_input)
@@ -426,17 +431,10 @@ class CustomModelDialog(QDialog):
             patience_threshold_mean=patience_mean,
             patience_threshold_sd=patience_sd,
             servers=int(self.servers_input.text()),
-            ordering_type=self.ordering_type_input.currentText(),
             counter_order_time_min=int(self.counter_min_input.text()),
             counter_order_time_max=int(self.counter_max_input.text()),
             counter_order_time_mean=float(self.counter_mean_input.text()),
             counter_order_time_sd=float(self.counter_sd_input.text()),
-            kiosks=int(self.kiosks_input.text()),
-            kiosk_usage_percent=float(self.kiosk_usage_input.text()),
-            kiosk_order_time_min=int(self.kiosk_min_input.text()),
-            kiosk_order_time_max=int(self.kiosk_max_input.text()),
-            kiosk_order_time_mean=float(self.kiosk_mean_input.text()),
-            kiosk_order_time_sd=float(self.kiosk_sd_input.text()),
             reservation_policy=self.reservation_policy_input.currentText(),
             reserved_table_percent=float(self.reserved_percent_input.text()),
             reservation_hold_before_min=int(self.hold_before_input.text()),
@@ -706,17 +704,10 @@ class Layer2Widget(QWidget):
             seed=(self.loaded_scenario.seed if self.loaded_scenario else None),
             generated=(self.loaded_scenario.generated if self.loaded_scenario else False),
             servers=self.model.servers,
-            ordering_type=self.model.ordering_type,
             counter_order_time_min=self.model.counter_order_time_min,
             counter_order_time_max=self.model.counter_order_time_max,
             counter_order_time_mean=self.model.counter_order_time_mean,
             counter_order_time_sd=self.model.counter_order_time_sd,
-            kiosks=self.model.kiosks,
-            kiosk_usage_percent=self.model.kiosk_usage_percent,
-            kiosk_order_time_min=self.model.kiosk_order_time_min,
-            kiosk_order_time_max=self.model.kiosk_order_time_max,
-            kiosk_order_time_mean=self.model.kiosk_order_time_mean,
-            kiosk_order_time_sd=self.model.kiosk_order_time_sd,
             reservation_policy=self.model.reservation_policy,
             reserved_table_percent=self.model.reserved_table_percent,
             reservation_hold_before_min=self.model.reservation_hold_before_min,
@@ -851,21 +842,49 @@ class Layer3Widget(QWidget):
         layout.addLayout(controls)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.stats_text = QPlainTextEdit()
-        self.stats_text.setReadOnly(True)
+        self.stats_columns = QSplitter(Qt.Orientation.Horizontal)
+        self.stats_left_text = QPlainTextEdit()
+        self.stats_left_text.setReadOnly(True)
+        self.stats_right_text = QPlainTextEdit()
+        self.stats_right_text.setReadOnly(True)
+        self.stats_columns.addWidget(self.stats_left_text)
+        self.stats_columns.addWidget(self.stats_right_text)
         self.scenario_text = QPlainTextEdit()
         self.scenario_text.setReadOnly(True)
         self.scenario_text.hide()
-        self.stats_text.setMinimumHeight(520)
+        self.stats_left_text.setMinimumHeight(520)
+        self.stats_right_text.setMinimumHeight(520)
         self.scenario_text.setMinimumHeight(520)
-        self.splitter.addWidget(self.stats_text)
+        self.splitter.addWidget(self.stats_columns)
         self.splitter.addWidget(self.scenario_text)
         layout.addWidget(self.splitter, 1)
 
     def set_result(self, scenario: Scenario, result) -> None:
         self.scenario = scenario
         self.result = result
-        self.stats_text.setPlainText(_format_statistics_text(result))
+        sections = _build_statistics_sections(result)
+        self.stats_left_text.setPlainText(
+            _format_statistics_column(
+                sections,
+                [
+                    "Overview",
+                    "Wait Times",
+                    "Ordering And Seating",
+                    "Reservations",
+                ],
+            )
+        )
+        self.stats_right_text.setPlainText(
+            _format_statistics_column(
+                sections,
+                [
+                    "Queue And Capacity",
+                    "Queue Length By Queue",
+                    "Total Wait Time By Group Size (arrival to seating)",
+                    "Ordering Wait By Group Size",
+                ],
+            )
+        )
         self.scenario_text.setPlainText(_format_scenario_text(scenario))
 
     def _toggle_sidebar(self) -> None:
@@ -922,17 +941,10 @@ class MainWindow(QMainWindow):
                 patience_threshold_mean=scenario.patience_threshold_mean,
                 patience_threshold_sd=scenario.patience_threshold_sd,
                 servers=scenario.servers,
-                ordering_type=scenario.ordering_type,
                 counter_order_time_min=scenario.counter_order_time_min,
                 counter_order_time_max=scenario.counter_order_time_max,
                 counter_order_time_mean=scenario.counter_order_time_mean,
                 counter_order_time_sd=scenario.counter_order_time_sd,
-                kiosks=scenario.kiosks,
-                kiosk_usage_percent=scenario.kiosk_usage_percent,
-                kiosk_order_time_min=scenario.kiosk_order_time_min,
-                kiosk_order_time_max=scenario.kiosk_order_time_max,
-                kiosk_order_time_mean=scenario.kiosk_order_time_mean,
-                kiosk_order_time_sd=scenario.kiosk_order_time_sd,
                 reservation_policy=scenario.reservation_policy,
                 reserved_table_percent=scenario.reserved_table_percent,
                 reservation_hold_before_min=scenario.reservation_hold_before_min,

@@ -11,7 +11,6 @@ STRATEGIES = {
     "first_available",
     "exact_match",
 }
-ORDERING_TYPES = {"counter_only", "hybrid"}
 RESERVATION_POLICIES = {"none", "hybrid_allocation"}
 
 
@@ -24,20 +23,12 @@ def validate_scenario(scenario: Scenario) -> None:
         raise ValueError(f"Unknown strategy name: {scenario.strategy_name}")
     if not scenario.tables:
         raise ValueError("Scenario must define at least one table inventory row")
-    if scenario.ordering_type not in ORDERING_TYPES:
-        raise ValueError(f"Unknown ordering type: {scenario.ordering_type}")
     if scenario.reservation_policy not in RESERVATION_POLICIES:
         raise ValueError(f"Unknown reservation policy: {scenario.reservation_policy}")
     if scenario.servers < 0:
         raise ValueError("Server count cannot be negative")
-    if scenario.ordering_type == "counter_only" and scenario.servers <= 0:
-        raise ValueError("Counter-only ordering requires at least one server")
-    if scenario.kiosks < 0:
-        raise ValueError("Kiosk count cannot be negative")
-    if scenario.ordering_type == "hybrid" and scenario.servers + scenario.kiosks <= 0:
-        raise ValueError("Hybrid ordering requires at least one server or kiosk")
-    if not 0.0 <= scenario.kiosk_usage_percent <= 1.0:
-        raise ValueError("Kiosk usage percent must be between 0.0 and 1.0")
+    if scenario.business_model_name != "food_truck" and scenario.servers <= 0:
+        raise ValueError("At least one server is required")
     if scenario.reservation_policy == "none" and scenario.reserved_table_percent != 0.0:
         raise ValueError("Reserved table percent must be 0.0 when reservations are disabled")
     if not 0.0 <= scenario.reserved_table_percent <= 1.0:
@@ -52,15 +43,6 @@ def validate_scenario(scenario: Scenario) -> None:
         scenario.counter_order_time_mean,
         scenario.counter_order_time_sd,
     )
-    if scenario.ordering_type == "hybrid":
-        _validate_bounds(
-            "Kiosk order time",
-            scenario.kiosk_order_time_min,
-            scenario.kiosk_order_time_max,
-            scenario.kiosk_order_time_mean,
-            scenario.kiosk_order_time_sd,
-        )
-
     for table in scenario.tables:
         if not isinstance(table.seats, int) or not isinstance(table.count, int):
             raise ValueError("Table seats and counts must be integers")

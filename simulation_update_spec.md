@@ -24,31 +24,14 @@ Patience is measured from arrival time and applies across both stages. A group c
 
 ```python
 servers: int
-# Number of counter staff available concurrently.
-
-ordering_type: str  # "counter_only" | "hybrid"
-# Determines whether kiosks are available.
+# Number of ordering service staff available concurrently.
 
 counter_order_time_min: int
 counter_order_time_max: int
 counter_order_time_mean: float
 counter_order_time_sd: float
-# Truncated normal distribution for counter ordering duration.
+# Truncated normal distribution for ordering duration.
 # Bounds: [counter_order_time_min, counter_order_time_max]
-
-kiosks: int
-# Number of self-service kiosk terminals. 0 if ordering_type is counter_only.
-
-kiosk_usage_percent: float
-# Probability [0.0, 1.0] that a group uses a kiosk when ordering_type is hybrid.
-# Ignored if ordering_type is counter_only.
-
-kiosk_order_time_min: int
-kiosk_order_time_max: int
-kiosk_order_time_mean: float
-kiosk_order_time_sd: float
-# Truncated normal distribution for kiosk ordering duration.
-# Only used when ordering_type is hybrid.
 ```
 
 ### 2.2 Reservation Parameters (added to `BusinessModel`)
@@ -196,17 +179,15 @@ All six presets are updated to include the new parameters.
         dining_duration_mean=18,
         dining_duration_sd=5,
     ),
-    servers=3,
-    ordering_type="counter_only",
+    servers=4,
     counter_order_time_min=1,
     counter_order_time_max=4,
     counter_order_time_mean=2,
     counter_order_time_sd=0.8,
-    kiosks=0,
     reservation_policy="none",
     patience_threshold_mean=15.0,
     patience_threshold_sd=5.0,
-    notes="Quick turnover. Counter ordering is fast. No reservations.",
+    notes="Quick turnover with four ordering servers. No reservations.",
 ),
 
 "fine_dining": BusinessModel(
@@ -224,12 +205,10 @@ All six presets are updated to include the new parameters.
         dining_duration_sd=18,
     ),
     servers=4,
-    ordering_type="counter_only",
     counter_order_time_min=3,
     counter_order_time_max=10,
     counter_order_time_mean=6,
     counter_order_time_sd=2,
-    kiosks=0,
     reservation_policy="hybrid_allocation",
     reserved_table_percent=0.5,
     reservation_hold_before_min=15,
@@ -253,13 +232,11 @@ All six presets are updated to include the new parameters.
         dining_duration_mean=60,
         dining_duration_sd=12,
     ),
-    servers=3,
-    ordering_type="counter_only",
+    servers=4,
     counter_order_time_min=2,
     counter_order_time_max=6,
     counter_order_time_mean=3,
     counter_order_time_sd=1,
-    kiosks=0,
     reservation_policy="none",
     patience_threshold_mean=24.0,
     patience_threshold_sd=8.0,
@@ -280,29 +257,22 @@ All six presets are updated to include the new parameters.
         dining_duration_mean=38,
         dining_duration_sd=8,
     ),
-    servers=2,
-    ordering_type="hybrid",
+    servers=3,
     counter_order_time_min=1,
     counter_order_time_max=4,
     counter_order_time_mean=2,
     counter_order_time_sd=0.7,
-    kiosks=1,
-    kiosk_usage_percent=0.4,
-    kiosk_order_time_min=1,
-    kiosk_order_time_max=3,
-    kiosk_order_time_mean=1.5,
-    kiosk_order_time_sd=0.5,
     reservation_policy="none",
     patience_threshold_mean=12.0,
     patience_threshold_sd=4.0,
-    notes="Solo and pair dominant. Mix of counter and self-service ordering. No reservations.",
+    notes="Solo and pair dominant. Three ordering servers. No reservations.",
 ),
 
 "food_truck": BusinessModel(
     name="food_truck",
     queue_type="single_queue",
     strategy_name="strict_fifo_fit",
-    tables=[TableInventory(seats=1, count=3)],
+    tables=[TableInventory(seats=1, count=2)],
     generator_profile=GeneratorProfile(
         min_group_size=1,
         max_group_size=1,
@@ -312,17 +282,15 @@ All six presets are updated to include the new parameters.
         dining_duration_mean=3,
         dining_duration_sd=1,
     ),
-    servers=1,
-    ordering_type="counter_only",
-    counter_order_time_min=1,
-    counter_order_time_max=4,
-    counter_order_time_mean=2,
-    counter_order_time_sd=0.8,
-    kiosks=0,
+    servers=0,
+    counter_order_time_min=0,
+    counter_order_time_max=0,
+    counter_order_time_mean=0,
+    counter_order_time_sd=0,
     reservation_policy="none",
     patience_threshold_mean=7.0,
     patience_threshold_sd=3.0,
-    notes="Single server. Order time models production time. Slot occupancy models pickup wait.",
+    notes="Two service slots. Dining duration models order and pickup service time.",
 ),
 
 ```
@@ -354,12 +322,10 @@ The saved scenario JSON is extended to include all new fields. Example partial s
       "dining_duration_sd": 12
     },
     "servers": 3,
-    "ordering_type": "counter_only",
     "counter_order_time_min": 2,
     "counter_order_time_max": 6,
     "counter_order_time_mean": 3,
     "counter_order_time_sd": 1,
-    "kiosks": 0,
     "reservation_policy": "none",
     "patience_threshold_mean": 24.0,
     "patience_threshold_sd": 8.0
