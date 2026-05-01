@@ -1,0 +1,15 @@
+{
+  "pair_id": "S6",
+  "kind": "oat",
+  "description": "Patience main effect: low versus high patience mean.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {"run_id": "A", "overrides": {"patience_mean": 10.0}},
+    {"run_id": "B", "overrides": {"patience_mean": 30.0}}
+  ],
+  "assertions": [
+    {"metric": "rejected_groups", "direction": "B < A"},
+    {"metric": "served_groups", "direction": "B > A"}
+  ]
+}

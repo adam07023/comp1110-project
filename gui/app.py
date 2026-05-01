@@ -82,8 +82,11 @@ def _format_model_details(model: BusinessModel) -> str:
             f"mean {model.patience_threshold_mean:.0f} minutes, "
             f"standard deviation {model.patience_threshold_sd:.0f} minutes",
         ),
-        ("Ordering Servers", str(model.servers)),
-        ("Order Time", f"{model.counter_order_time_min} to {model.counter_order_time_max} minutes"),
+        ("Counters", str(model.counters)),
+        ("Kiosks", str(model.kiosks)),
+        ("Kiosk Usage", f"{model.kiosk_usage_percent * 100:.0f}%"),
+        ("Counter Order Time", f"{model.counter_order_time_min} to {model.counter_order_time_max} minutes"),
+        ("Kiosk Order Time", f"{model.kiosk_order_time_min} to {model.kiosk_order_time_max} minutes"),
         ("Reservation Policy", model.reservation_policy.replace("_", " ")),
         ("Tables", table_text),
         ("Group-Size Weighting", weight_text),
@@ -114,8 +117,7 @@ def _format_stat_line(label: str, value: str) -> str:
         return f"Simulation end time: {value} minutes"
 
     if label == "server_utilization_rate":
-        friendly = label.replace("_", " ").capitalize()
-        return f"{friendly}: {float(value) * 100:.1f}%"
+        return f"Ordering resource utilization: {float(value) * 100:.1f}%"
 
     if label.startswith("max_queue_length_queue_"):
         queue_label = label.removeprefix("max_queue_length_queue_").replace("_", "-").replace("plus", "+")
@@ -233,6 +235,17 @@ def _format_scenario_text(scenario: Scenario) -> str:
         f"Queue style: {scenario.queue_type.replace('_', ' ')}",
         f"Seating strategy: {scenario.strategy_name.replace('_', ' ')}",
         "Tables: " + ", ".join(f"{table.count} x {table.seats}-seat" for table in scenario.tables),
+        f"Counters: {scenario.counters}",
+        f"Kiosks: {scenario.kiosks}",
+        f"Kiosk usage: {scenario.kiosk_usage_percent * 100:.0f}%",
+        (
+            "Counter order time: "
+            f"{scenario.counter_order_time_min} to {scenario.counter_order_time_max} minutes"
+        ),
+        (
+            "Kiosk order time: "
+            f"{scenario.kiosk_order_time_min} to {scenario.kiosk_order_time_max} minutes"
+        ),
         "",
         "Arrivals:",
     ]
@@ -317,11 +330,17 @@ class CustomModelDialog(QDialog):
         )
         self.tables_input = QLineEdit("2:4,4:4")
         self.weights_input = QLineEdit("1:0.3,2:0.3,3:0.2,4:0.2")
-        self.servers_input = QLineEdit("1")
+        self.counters_input = QLineEdit("1")
+        self.kiosks_input = QLineEdit("0")
+        self.kiosk_usage_input = QLineEdit("0")
         self.counter_min_input = QLineEdit("0")
         self.counter_max_input = QLineEdit("4")
         self.counter_mean_input = QLineEdit("2")
         self.counter_sd_input = QLineEdit("0.8")
+        self.kiosk_min_input = QLineEdit("0")
+        self.kiosk_max_input = QLineEdit("4")
+        self.kiosk_mean_input = QLineEdit("2")
+        self.kiosk_sd_input = QLineEdit("0.8")
         self.reservation_policy_input = self._combo(["none", "hybrid_allocation"])
         self.reserved_percent_input = QLineEdit("0")
         self.hold_before_input = QLineEdit("0")
@@ -352,11 +371,13 @@ class CustomModelDialog(QDialog):
         columns.addWidget(timing_group)
 
         service_group, service_form = self._group_form("Ordering And Reservations")
-        service_form.addRow("Servers", self.servers_input)
-        service_form.addRow("Order Time Min", self.counter_min_input)
-        service_form.addRow("Order Time Max", self.counter_max_input)
-        service_form.addRow("Order Time Mean", self.counter_mean_input)
-        service_form.addRow("Order Time SD", self.counter_sd_input)
+        service_form.addRow("Counter Number", self.counters_input)
+        service_form.addRow("Kiosk Number", self.kiosks_input)
+        service_form.addRow("Kiosk Usage Percent", self.kiosk_usage_input)
+        service_form.addRow("Counter Time Min / Max", self._paired_inputs(self.counter_min_input, self.counter_max_input))
+        service_form.addRow("Counter Time Mean / SD", self._paired_inputs(self.counter_mean_input, self.counter_sd_input))
+        service_form.addRow("Kiosk Time Min / Max", self._paired_inputs(self.kiosk_min_input, self.kiosk_max_input))
+        service_form.addRow("Kiosk Time Mean / SD", self._paired_inputs(self.kiosk_mean_input, self.kiosk_sd_input))
         service_form.addRow("Reservation Policy", self.reservation_policy_input)
         service_form.addRow("Reserved Table Percent", self.reserved_percent_input)
         service_form.addRow("Reservation Hold Before", self.hold_before_input)
@@ -392,6 +413,15 @@ class CustomModelDialog(QDialog):
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         return group, form
 
+    def _paired_inputs(self, first: QLineEdit, second: QLineEdit) -> QWidget:
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(first)
+        layout.addWidget(second)
+        return container
+
     def build_model(self) -> BusinessModel:
         name = self.name_input.text().strip()
         if not name:
@@ -413,6 +443,9 @@ class CustomModelDialog(QDialog):
         patience_sd = float(self.patience_sd_input.text())
         if patience_mean <= 0 or patience_sd < 0:
             raise ValueError("Patience mean must be positive and SD cannot be negative")
+        kiosk_usage_percent = float(self.kiosk_usage_input.text())
+        if not 0 <= kiosk_usage_percent <= 100:
+            raise ValueError("Kiosk usage percent must be between 0 and 100")
 
         return BusinessModel(
             name=name,
@@ -430,11 +463,17 @@ class CustomModelDialog(QDialog):
             ),
             patience_threshold_mean=patience_mean,
             patience_threshold_sd=patience_sd,
-            servers=int(self.servers_input.text()),
+            counters=int(self.counters_input.text()),
+            kiosks=int(self.kiosks_input.text()),
+            kiosk_usage_percent=kiosk_usage_percent / 100,
             counter_order_time_min=int(self.counter_min_input.text()),
             counter_order_time_max=int(self.counter_max_input.text()),
             counter_order_time_mean=float(self.counter_mean_input.text()),
             counter_order_time_sd=float(self.counter_sd_input.text()),
+            kiosk_order_time_min=int(self.kiosk_min_input.text()),
+            kiosk_order_time_max=int(self.kiosk_max_input.text()),
+            kiosk_order_time_mean=float(self.kiosk_mean_input.text()),
+            kiosk_order_time_sd=float(self.kiosk_sd_input.text()),
             reservation_policy=self.reservation_policy_input.currentText(),
             reserved_table_percent=float(self.reserved_percent_input.text()),
             reservation_hold_before_min=int(self.hold_before_input.text()),
@@ -703,11 +742,17 @@ class Layer2Widget(QWidget):
             patience_threshold_sd=self.model.patience_threshold_sd,
             seed=(self.loaded_scenario.seed if self.loaded_scenario else None),
             generated=(self.loaded_scenario.generated if self.loaded_scenario else False),
-            servers=self.model.servers,
+            counters=self.model.counters,
+            kiosks=self.model.kiosks,
+            kiosk_usage_percent=self.model.kiosk_usage_percent,
             counter_order_time_min=self.model.counter_order_time_min,
             counter_order_time_max=self.model.counter_order_time_max,
             counter_order_time_mean=self.model.counter_order_time_mean,
             counter_order_time_sd=self.model.counter_order_time_sd,
+            kiosk_order_time_min=self.model.kiosk_order_time_min,
+            kiosk_order_time_max=self.model.kiosk_order_time_max,
+            kiosk_order_time_mean=self.model.kiosk_order_time_mean,
+            kiosk_order_time_sd=self.model.kiosk_order_time_sd,
             reservation_policy=self.model.reservation_policy,
             reserved_table_percent=self.model.reserved_table_percent,
             reservation_hold_before_min=self.model.reservation_hold_before_min,
@@ -940,11 +985,17 @@ class MainWindow(QMainWindow):
                 ),
                 patience_threshold_mean=scenario.patience_threshold_mean,
                 patience_threshold_sd=scenario.patience_threshold_sd,
-                servers=scenario.servers,
+                counters=scenario.counters,
+                kiosks=scenario.kiosks,
+                kiosk_usage_percent=scenario.kiosk_usage_percent,
                 counter_order_time_min=scenario.counter_order_time_min,
                 counter_order_time_max=scenario.counter_order_time_max,
                 counter_order_time_mean=scenario.counter_order_time_mean,
                 counter_order_time_sd=scenario.counter_order_time_sd,
+                kiosk_order_time_min=scenario.kiosk_order_time_min,
+                kiosk_order_time_max=scenario.kiosk_order_time_max,
+                kiosk_order_time_mean=scenario.kiosk_order_time_mean,
+                kiosk_order_time_sd=scenario.kiosk_order_time_sd,
                 reservation_policy=scenario.reservation_policy,
                 reserved_table_percent=scenario.reserved_table_percent,
                 reservation_hold_before_min=scenario.reservation_hold_before_min,

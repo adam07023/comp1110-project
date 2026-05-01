@@ -80,7 +80,7 @@ def _sample_dining_duration(business_model: BusinessModel, rng: random.Random) -
 
 def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: random.Random) -> int:
     if duration <= 0:
-        return 0
+        return 1
 
     pattern = business_model.arrival_pattern
     if pattern == "uniform":
@@ -99,7 +99,7 @@ def _sample_arrival_time(business_model: BusinessModel, duration: int, rng: rand
         ratio = rng.random()
 
     bounded_ratio = min(1.0, max(0.0, ratio))
-    return int(round(bounded_ratio * duration))
+    return max(1, int(round(bounded_ratio * duration)))
 
 
 def generate_random_scenario(
@@ -138,11 +138,17 @@ def generate_random_scenario(
         patience_threshold_sd=business_model.patience_threshold_sd,
         seed=seed,
         generated=generated,
-        servers=business_model.servers,
+        counters=business_model.counters,
+        kiosks=business_model.kiosks,
+        kiosk_usage_percent=business_model.kiosk_usage_percent,
         counter_order_time_min=business_model.counter_order_time_min,
         counter_order_time_max=business_model.counter_order_time_max,
         counter_order_time_mean=business_model.counter_order_time_mean,
         counter_order_time_sd=business_model.counter_order_time_sd,
+        kiosk_order_time_min=business_model.kiosk_order_time_min,
+        kiosk_order_time_max=business_model.kiosk_order_time_max,
+        kiosk_order_time_mean=business_model.kiosk_order_time_mean,
+        kiosk_order_time_sd=business_model.kiosk_order_time_sd,
         reservation_policy=business_model.reservation_policy,
         reserved_table_percent=business_model.reserved_table_percent,
         reservation_hold_before_min=business_model.reservation_hold_before_min,

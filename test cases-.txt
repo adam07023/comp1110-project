@@ -1,0 +1,318 @@
+//Scenario 1: Seat Waste from Mismatched Table Assignment
+Challenge: Small groups occupy large tables, wasting capacity. Large groups arrive to find no suitable tables → long waits → abandonment.
+
+Factor varied: Seating policy
+
+Run A: Random seating (any group to any available table)
+
+Run B: Strict size-to-table matching (size 2 → 2-seat only, size 4 → 4-seat only, size 6 → 6-seat only)
+
+Restaurant tables: 2,2,2,2,4,4,6,6 (4 small, 2 medium, 2 large = 28 seats)//
+
+
+
+# Scenario 1 - Run A: Random seating with waste
+tables = 2,2,2,2,4,4,6,6
+servers = 3
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = first_available_table
+counter_order_time_min = 2
+counter_order_time_max = 3
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 30
+abandonment_rate_at_threshold = 0.50
+
+# Scenario 1 - Run B: Strict size-to-table matching
+tables = 2,2,2,2,4,4,6,6
+servers = 3
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = exact_size_match
+# Size 2 → only 2-seat tables
+# Size 4 → only 4-seat tables  
+# Size 6 → only 6-seat tables
+counter_order_time_min = 2
+counter_order_time_max = 3
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 30
+abandonment_rate_at_threshold = 0.50
+
+Expected Metrics
+Metric	                   Run A (Random)	Run B (Strict)	Improvement
+Medium group (size 4) wait	   38 min	   2 min	        ↓ 95%
+Large group (size 6) wait	   42 min	   1 min	          ↓ 98%
+Seat utilization            	54%	        100%	          ↑ 85%
+Groups served (of 12)	         8	        12	             ↑ 50%
+Recommendation: Use strict size-to-table matching when large groups >20% of traffic. Small group wait increases but large group abandonment drops dramatically.
+
+Scenario 2: Single Queue vs. Size-Based Queues (WITH Size-to-Table Matching)
+The problem addressed: Even with strict size-to-table matching (groups only sit at correctly sized tables), a single FCFS queue still causes large groups to wait longer because small groups ahead of them in the queue occupy all the small tables, and large groups cannot "jump ahead" to available large tables.
+
+Key insight: The blocking happens in the queue order, not in table assignment.
+
+# Scenario 2 - Run A: Single queue with strict size matching
+# PROBLEM: Large groups wait behind small groups in FCFS queue
+
+tables = 2,2,2,2,4,4,6,6
+servers = 3
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+
+# SINGLE QUEUE - CAUSES BLOCKING
+walkin_queue_discipline = single_queue
+
+# STRICT SIZE-TO-TABLE MATCHING (same in both runs)
+seating_policy = exact_size_match
+
+counter_order_time_min = 2
+counter_order_time_max = 3
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 30
+abandonment_rate_at_threshold = 0.50
+
+# Scenario 2 - Run B: Size-based queues with strict size matching
+# SOLUTION: Separate queues prevent large groups from waiting behind small groups
+
+tables = 2,2,2,2,4,4,6,6
+servers = 3
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+
+# SIZE-BASED QUEUES - THE SOLUTION
+walkin_queue_discipline = size_based
+size_queue_1_min = 1
+size_queue_1_max = 2
+size_queue_2_min = 3
+size_queue_2_max = 4
+size_queue_3_min = 5
+size_queue_3_max = 6
+
+# STRICT SIZE-TO-TABLE MATCHING
+seating_policy = exact_size_match
+
+counter_order_time_min = 2
+counter_order_time_max = 3
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 30
+abandonment_rate_at_threshold = 0.50
+
+Expected Metrics (With Strict Matching in Both)
+Metric	                         Run A (Single queue)	Run B (Size queues)	Improvement
+Large group (size 6) avg wait	      28 min	                  14 min	↓ 50%
+Large group max wait	              45 min	                  22 min	↓ 51%
+Medium group (size 4) avg wait	       22 min	                  12 min	↓ 45%
+Small group (size 2) avg wait	       8 min	                  11 min	↑ 38% (trade-off)
+Large group abandonment            	40%	                         10%	     ↓ 75%
+Table utilization (6-seat)	            65%                    	88%       	↑ 35%
+Table utilization (4-seat)	         70%	                      91%	    ↑ 30%
+
+Scenario 3: Counter-Only vs. Self-Service Kiosks
+Challenge: Extended wait times lead to 75% churn for 1st-time visitors during peak hours.
+
+Factor varied: Ordering channel
+
+Run A: Counter-only ordering (3-4 min per group)
+
+Run B: 2 self-service kiosks + counter (60% use kiosks, 1-2 min per group)
+
+Restaurant tables: 2,2,4,4,6,6,6,6 (2 small, 2 medium, 4 large = 48 seats)
+
+# Scenario 3 - Run A: Counter-only ordering
+tables = 2,2,4,4,6,6,6,6
+servers = 4
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = exact_size_match
+counter_order_time_min = 3
+counter_order_time_max = 4
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 20
+abandonment_rate_at_threshold = 0.75
+
+# Scenario 3 - Run B: Self-service kiosks
+tables = 2,2,4,4,6,6,6,6
+servers = 4
+kiosks = 2
+ordering_type = hybrid
+kiosk_usage_percent = 60
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = exact_size_match
+counter_order_time_min = 3
+counter_order_time_max = 4
+kiosk_order_time_min = 1
+kiosk_order_time_max = 2
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 20
+abandonment_rate_at_threshold = 0.75
+
+Expected Metrics
+Metric              	Run A (Counter)	Run B (Kiosks)	Improvement
+Average wait time	          25 min	12 min        	↓ 52%
+Abandonment rate            	75%	       30%      	↓ 60%
+Groups served	              32	       41	        ↑ 28%
+Table utilization	         88%	      94%	         ↑ 7%
+Recommendation: Install 2 self-service kiosks. For restaurants with >$500/day dinner revenue, payback period <3 months.
+
+
+Scenario 4: 2 Servers vs. 3 Servers (Peak Hour Bottleneck)
+Challenge: Noon lunch rush → 2 servers at 95% utilization → orders queue → tables sit empty waiting for food.
+
+Factor varied: Number of servers
+
+Run A: 2 servers
+
+Run B: 3 servers
+
+Restaurant tables: 2,2,2,2,2,2,2,2,2,2,4,4,4,4,4 (10 small, 5 medium = 40 seats)
+
+# Scenario 4 - Run A: 2 servers
+tables = 2,2,2,2,2,2,2,2,2,2,4,4,4,4,4
+servers = 2
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = exact_size_match
+counter_order_time_min = 2
+counter_order_time_max = 4
+food_prep_time_min = 5
+food_prep_time_max = 8
+abandonment_threshold_minutes = 25
+abandonment_rate_at_threshold = 0.60
+
+
+# Scenario 4 - Run B: 3 servers
+tables = 2,2,2,2,2,2,2,2,2,2,4,4,4,4,4
+servers = 3
+kiosks = 0
+ordering_type = counter_only
+reservation_policy = none
+walkin_queue_discipline = single_queue
+seating_policy = exact_size_match
+counter_order_time_min = 2
+counter_order_time_max = 4
+food_prep_time_min = 5
+food_prep_time_max = 8
+abandonment_threshold_minutes = 25
+abandonment_rate_at_threshold = 0.60
+
+Expected Metrics
+Metric                	Run A (2 servers)	Run B (3 servers)	Improvement
+Server utilization          	95%	             65%	        ↓ 32%
+Average wait                  	18 min	          9 min       	↓ 50%
+Groups served                	32	              38	         ↑ 19%
+Abandonment rate	            55%	                20%       	↓ 64%
+Recommendation: Add 3rd server if peak hour revenue > $250. Otherwise, cross-train kitchen staff to take orders during rush.
+
+
+Scenario 5: Online Reservations vs. Walk-in Only (Hybrid Queue Management)
+Challenge: Restaurants that accept both online reservations and walk-ins struggle to balance both. Too many reservations block walk-ins. Too few reservations leave tables empty during peak hours.
+
+Factor varied: Reservation-to-walk-in table allocation
+
+Run A: No reservations (100% walk-in — baseline)
+Run B: 40% tables reserved for online bookings, 60% for walk-ins (hybrid)
+
+Run A: Walk-in Only (Baseline)
+
+# Scenario 5 - Run A: Walk-in only (no reservations)
+# Baseline: All customers are walk-ins
+
+tables = 2,2,2,2,4,4,6,6,6
+servers = 4
+kiosks = 1
+ordering_type = hybrid
+kiosk_usage_percent = 50
+
+# NO RESERVATIONS - all tables for walk-ins
+reservation_policy = none
+
+walkin_queue_discipline = size_based
+size_queue_1_min = 1
+size_queue_1_max = 2
+size_queue_2_min = 3
+size_queue_2_max = 4
+size_queue_3_min = 5
+size_queue_3_max = 6
+
+seating_policy = exact_size_match
+
+counter_order_time_min = 2
+counter_order_time_max = 3
+kiosk_order_time_min = 1
+kiosk_order_time_max = 1
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 25
+abandonment_rate_at_threshold = 0.40
+
+# Table release time after reservation (not used in Run A)
+reservation_hold_before_min = 0
+reservation_hold_after_min = 0
+
+Run B: Hybrid (40% Reserved / 60% Walk-in)
+
+# Scenario 5 - Run B: Hybrid (40% reserved tables, 60% walk-in)
+# SOLUTION: Dedicated tables for reservations + walk-ins
+
+tables = 2,2,2,2,4,4,6,6,6
+servers = 4
+kiosks = 1
+ordering_type = hybrid
+kiosk_usage_percent = 50
+
+# RESERVATION POLICY: 40% of tables reserved
+reservation_policy = hybrid_allocation
+reserved_table_percent = 40      # 40% of tables (rounded: 3-4 tables)
+# Reserved tables: 2x(2-seat), 1x(4-seat), 1x(6-seat) = 14 reserved seats
+# Walk-in tables: 2x(2-seat), 1x(4-seat), 2x(6-seat) = 20 walk-in seats
+
+walkin_queue_discipline = size_based
+size_queue_1_min = 1
+size_queue_1_max = 2
+size_queue_2_min = 3
+size_queue_2_max = 4
+size_queue_3_min = 5
+size_queue_3_max = 6
+
+seating_policy = exact_size_match
+
+counter_order_time_min = 2
+counter_order_time_max = 3
+kiosk_order_time_min = 1
+kiosk_order_time_max = 1
+food_prep_time_min = 8
+food_prep_time_max = 12
+abandonment_threshold_minutes = 25
+abandonment_rate_at_threshold = 0.40
+
+# Reservation hold times
+reservation_hold_before_min = 10
+reservation_hold_after_min = 10
+
+Expected Metrics
+Metric	                Run A (Walk-in only)	Run B (Hybrid 40/60)	Improvement
+Walk-in average wait        	28 min	              18 min	           ↓ 36%
+Reservation wait	      N/A (no reservations )	  2 min	              Acceptable
+Walk-in abandonment           	40%                 	25%             	↓ 38%
+Reservation abandonment 	   N/A	                   5% (very late)	         —
+Table utilization	            88%	                  85%                	↓ 3% (trade-off)
+Total groups served	           32/40	               37/40            	↑ 16%
+Revenue predictability      	Low	High	          Significant
+

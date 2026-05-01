@@ -25,14 +25,25 @@ class BusinessModel:
     generator_profile: GeneratorProfile
     patience_threshold_mean: float
     patience_threshold_sd: float
-    servers: int = 1
+    counters: int = 1
+    kiosks: int = 0
+    kiosk_usage_percent: float = 0.0
     counter_order_time_min: int = 0
     counter_order_time_max: int = 0
     counter_order_time_mean: float = 0.0
     counter_order_time_sd: float = 0.0
+    kiosk_order_time_min: int = 0
+    kiosk_order_time_max: int = 0
+    kiosk_order_time_mean: float = 0.0
+    kiosk_order_time_sd: float = 0.0
     reservation_policy: str = "none"
     reserved_table_percent: float = 0.0
     reservation_hold_before_min: int = 0
     reservation_hold_after_min: int = 0
     arrival_pattern: str = "uniform"
     notes: str = field(default="")
+
+    @property
+    def servers(self) -> int:
+        """Legacy aggregate ordering resource count."""
+        return self.counters + self.kiosks

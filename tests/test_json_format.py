@@ -42,6 +42,8 @@ class JsonFormatTests(unittest.TestCase):
         self.assertEqual(loaded.patience_threshold_sd, scenario.patience_threshold_sd)
         self.assertEqual(loaded.seed, scenario.seed)
         self.assertEqual(loaded.generated, scenario.generated)
+        self.assertEqual(loaded.counters, scenario.counters)
+        self.assertEqual(loaded.kiosks, scenario.kiosks)
 
     def test_nested_business_model_json_loads_service_fields(self) -> None:
         payload = """
@@ -83,7 +85,10 @@ class JsonFormatTests(unittest.TestCase):
             loaded = load_scenario_json(target)
 
         self.assertEqual(loaded.business_model_name, "casual_dining")
+        self.assertEqual(loaded.counters, 2)
+        self.assertEqual(loaded.kiosks, 1)
         self.assertEqual(loaded.servers, 3)
+        self.assertEqual(loaded.kiosk_order_time_mean, loaded.counter_order_time_mean)
         self.assertEqual(loaded.reservation_policy, "hybrid_allocation")
         self.assertTrue(loaded.arrivals[0].is_reservation)
         self.assertEqual(loaded.arrivals[0].scheduled_time, 5)

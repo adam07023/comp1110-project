@@ -66,7 +66,15 @@ def _sample_patience_threshold(mean: float, sd: float, rng: random.Random) -> in
     return _sample_truncated_normal(minimum=minimum, maximum=maximum, mean=mean, sd=sd, rng=rng)
 
 
-def _order_duration(scenario: Scenario, rng: random.Random) -> int:
+def _order_duration(scenario: Scenario, rng: random.Random, channel: str) -> int:
+    if channel == "kiosk":
+        return _sample_truncated_normal(
+            scenario.kiosk_order_time_min,
+            scenario.kiosk_order_time_max,
+            scenario.kiosk_order_time_mean,
+            scenario.kiosk_order_time_sd,
+            rng,
+        )
     return _sample_truncated_normal(
         scenario.counter_order_time_min,
         scenario.counter_order_time_max,
@@ -74,6 +82,27 @@ def _order_duration(scenario: Scenario, rng: random.Random) -> int:
         scenario.counter_order_time_sd,
         rng,
     )
+
+
+def _choose_order_channel(
+    scenario: Scenario,
+    counter_available: int,
+    kiosk_available: int,
+    rng: random.Random,
+) -> str | None:
+    if counter_available <= 0 and kiosk_available <= 0:
+        return None
+    if counter_available <= 0:
+        return "kiosk"
+    if kiosk_available <= 0:
+        return "counter"
+
+    kiosk_weight = scenario.kiosk_usage_percent * kiosk_available
+    counter_weight = (1.0 - scenario.kiosk_usage_percent) * counter_available
+    total_weight = kiosk_weight + counter_weight
+    if total_weight <= 0:
+        return "counter"
+    return "kiosk" if rng.random() < kiosk_weight / total_weight else "counter"
 
 
 def _service_level_threshold_for_model(model_name: str) -> int:
@@ -131,7 +160,8 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
     queue_lengths: list[int] = [0]
     queue_length_snapshots: list[dict[str, int]] = [seating_queue.queue_lengths_by_label()]
     states: dict[str, GroupState] = {}
-    server_available = scenario.servers
+    counter_available = scenario.counters
+    kiosk_available = scenario.kiosks
     server_busy_time = 0
     reservation_tables_released = 0
     reservation_no_shows = 0
@@ -193,16 +223,19 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             )
 
     def release_order_resource(state: GroupState, timestamp: int) -> None:
-        nonlocal server_available, server_busy_time
-        server_available += 1
+        nonlocal counter_available, kiosk_available, server_busy_time
+        if state.order_channel == "kiosk":
+            kiosk_available += 1
+        else:
+            counter_available += 1
         if state.service_start_time is not None:
             server_busy_time += max(0, timestamp - state.service_start_time)
         state.service_start_time = None
         state.service_end_time = None
 
     def try_start_orders(timestamp: int) -> None:
-        nonlocal server_available
-        while ordering_queue and server_available > 0:
+        nonlocal counter_available, kiosk_available
+        while ordering_queue and (counter_available > 0 or kiosk_available > 0):
             group_id = ordering_queue.popleft()
             state = states[group_id]
             if state.status != "ordering_queue":
@@ -210,10 +243,17 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             if state.leave_time <= timestamp:
                 schedule(timestamp, "abandonment", group_id)
                 continue
-            server_available -= 1
-            duration = _order_duration(scenario, rng)
+            channel = _choose_order_channel(scenario, counter_available, kiosk_available, rng)
+            if channel is None:
+                ordering_queue.appendleft(group_id)
+                break
+            if channel == "kiosk":
+                kiosk_available -= 1
+            else:
+                counter_available -= 1
+            duration = _order_duration(scenario, rng, channel)
             state.status = "ordering_service"
-            state.order_channel = "server"
+            state.order_channel = channel
             state.order_start_time = timestamp
             state.service_start_time = timestamp
             state.service_end_time = timestamp + duration
@@ -223,8 +263,9 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 event_type="order_start",
                 group_id=group_id,
                 queue_size=total_waiting(),
-                message=f"Group {group_id} started ordering",
+                message=f"Group {group_id} started ordering at {channel}",
                 order_duration=duration,
+                order_channel=channel,
             )
             schedule(timestamp + duration, "order_complete", group_id)
 

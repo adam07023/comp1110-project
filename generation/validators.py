@@ -25,10 +25,14 @@ def validate_scenario(scenario: Scenario) -> None:
         raise ValueError("Scenario must define at least one table inventory row")
     if scenario.reservation_policy not in RESERVATION_POLICIES:
         raise ValueError(f"Unknown reservation policy: {scenario.reservation_policy}")
-    if scenario.servers < 0:
-        raise ValueError("Server count cannot be negative")
+    if scenario.counters < 0:
+        raise ValueError("Counter count cannot be negative")
+    if scenario.kiosks < 0:
+        raise ValueError("Kiosk count cannot be negative")
     if scenario.business_model_name != "food_truck" and scenario.servers <= 0:
-        raise ValueError("At least one server is required")
+        raise ValueError("At least one ordering resource is required")
+    if not 0.0 <= scenario.kiosk_usage_percent <= 1.0:
+        raise ValueError("Kiosk usage percent must be between 0.0 and 1.0")
     if scenario.reservation_policy == "none" and scenario.reserved_table_percent != 0.0:
         raise ValueError("Reserved table percent must be 0.0 when reservations are disabled")
     if not 0.0 <= scenario.reserved_table_percent <= 1.0:
@@ -42,6 +46,13 @@ def validate_scenario(scenario: Scenario) -> None:
         scenario.counter_order_time_max,
         scenario.counter_order_time_mean,
         scenario.counter_order_time_sd,
+    )
+    _validate_bounds(
+        "Kiosk order time",
+        scenario.kiosk_order_time_min,
+        scenario.kiosk_order_time_max,
+        scenario.kiosk_order_time_mean,
+        scenario.kiosk_order_time_sd,
     )
     for table in scenario.tables:
         if not isinstance(table.seats, int) or not isinstance(table.count, int):

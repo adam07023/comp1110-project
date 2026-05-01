@@ -72,7 +72,7 @@ class EngineTests(unittest.TestCase):
                 GroupArrival(group_id="G1", arrival_time=0, group_size=2, dining_duration=10),
                 GroupArrival(group_id="G2", arrival_time=1, group_size=2, dining_duration=5),
             ],
-            servers=1,
+            counters=1,
             counter_order_time_min=5,
             counter_order_time_max=5,
             counter_order_time_mean=5,
@@ -86,7 +86,7 @@ class EngineTests(unittest.TestCase):
         self.assertTrue(any(event.event_type == "order_start" for event in result.events))
         self.assertTrue(any(event.event_type == "order_complete" for event in result.events))
 
-    def test_server_capacity_allows_parallel_ordering(self) -> None:
+    def test_counter_capacity_allows_parallel_ordering(self) -> None:
         scenario = Scenario(
             business_model_name="test",
             queue_type="single_queue",
@@ -97,7 +97,7 @@ class EngineTests(unittest.TestCase):
                 GroupArrival(group_id="G2", arrival_time=0, group_size=2, dining_duration=5),
                 GroupArrival(group_id="G3", arrival_time=0, group_size=2, dining_duration=5),
             ],
-            servers=2,
+            counters=2,
             counter_order_time_min=5,
             counter_order_time_max=5,
             counter_order_time_mean=5,
@@ -111,6 +111,45 @@ class EngineTests(unittest.TestCase):
             if event.event_type == "order_start" and event.timestamp == 0
         ]
         self.assertEqual(len(order_starts_at_zero), 2)
+
+    def test_counter_and_kiosk_capacity_allow_parallel_ordering(self) -> None:
+        scenario = Scenario(
+            business_model_name="test",
+            queue_type="single_queue",
+            strategy_name="fifo_fit",
+            tables=[TableInventory(seats=2, count=2)],
+            arrivals=[
+                GroupArrival(group_id="G1", arrival_time=0, group_size=2, dining_duration=5),
+                GroupArrival(group_id="G2", arrival_time=0, group_size=2, dining_duration=5),
+            ],
+            counters=1,
+            kiosks=1,
+            kiosk_usage_percent=1.0,
+            counter_order_time_min=5,
+            counter_order_time_max=5,
+            counter_order_time_mean=5,
+            counter_order_time_sd=0,
+            kiosk_order_time_min=7,
+            kiosk_order_time_max=7,
+            kiosk_order_time_mean=7,
+            kiosk_order_time_sd=0,
+        )
+
+        result = run_simulation(scenario)
+
+        order_starts_at_zero = [
+            event for event in result.events
+            if event.event_type == "order_start" and event.timestamp == 0
+        ]
+        self.assertEqual(len(order_starts_at_zero), 2)
+        self.assertEqual(
+            sorted(event.metadata["order_channel"] for event in order_starts_at_zero),
+            ["counter", "kiosk"],
+        )
+        self.assertEqual(
+            sorted(event.metadata["order_duration"] for event in order_starts_at_zero),
+            [5, 7],
+        )
 
     def test_engine_records_abandonment_stage(self) -> None:
         scenario = Scenario(
@@ -134,7 +173,7 @@ class EngineTests(unittest.TestCase):
                     patience_override=3,
                 ),
             ],
-            servers=1,
+            counters=1,
             counter_order_time_min=10,
             counter_order_time_max=10,
             counter_order_time_mean=10,
@@ -162,7 +201,7 @@ class EngineTests(unittest.TestCase):
                     scheduled_time=3,
                 )
             ],
-            servers=1,
+            counters=1,
             counter_order_time_min=10,
             counter_order_time_max=10,
             counter_order_time_mean=10,
@@ -190,7 +229,7 @@ class EngineTests(unittest.TestCase):
                 GroupArrival(group_id="G2", arrival_time=0, group_size=1, dining_duration=5),
                 GroupArrival(group_id="G3", arrival_time=0, group_size=1, dining_duration=5),
             ],
-            servers=0,
+            counters=0,
             counter_order_time_min=0,
             counter_order_time_max=0,
             counter_order_time_mean=0,
@@ -218,7 +257,7 @@ class EngineTests(unittest.TestCase):
                 GroupArrival(group_id="G2", arrival_time=0, group_size=3, dining_duration=10),
                 GroupArrival(group_id="G3", arrival_time=0, group_size=5, dining_duration=10),
             ],
-            servers=3,
+            counters=3,
             counter_order_time_min=0,
             counter_order_time_max=0,
             counter_order_time_mean=0,

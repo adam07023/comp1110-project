@@ -30,7 +30,10 @@ class TxtFormatTests(unittest.TestCase):
         self.assertEqual(loaded.patience_threshold_sd, scenario.patience_threshold_sd)
         self.assertEqual(loaded.tables, scenario.tables)
         self.assertEqual(loaded.arrivals, scenario.arrivals)
-        self.assertEqual(loaded.servers, scenario.servers)
+        self.assertEqual(loaded.counters, scenario.counters)
+        self.assertEqual(loaded.kiosks, scenario.kiosks)
+        self.assertEqual(loaded.kiosk_usage_percent, scenario.kiosk_usage_percent)
+        self.assertEqual(loaded.kiosk_order_time_mean, scenario.kiosk_order_time_mean)
 
     def test_scenario_round_trip_preserves_group_ids_and_patience(self) -> None:
         scenario = Scenario(
@@ -68,6 +71,42 @@ class TxtFormatTests(unittest.TestCase):
             loaded = load_scenario(target)
 
         self.assertEqual(loaded.arrivals, scenario.arrivals)
+
+    def test_legacy_ordering_section_maps_servers_to_counters(self) -> None:
+        scenario_text = "\n".join(
+            [
+                "[business_model]",
+                "name=custom_demo",
+                "",
+                "[queue]",
+                "type=single_queue",
+                "strategy=fifo_fit",
+                "",
+                "[ordering]",
+                "servers=2",
+                "kiosks=1",
+                "order_min=1",
+                "order_max=3",
+                "order_mean=2",
+                "order_sd=0.5",
+                "",
+                "[tables]",
+                "2,1",
+                "",
+                "[arrivals]",
+                "G1,0,2,10,,false,",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "legacy.txt"
+            target.write_text(scenario_text, encoding="utf-8")
+            loaded = load_scenario(target)
+
+        self.assertEqual(loaded.counters, 2)
+        self.assertEqual(loaded.kiosks, 1)
+        self.assertEqual(loaded.servers, 3)
+        self.assertEqual(loaded.kiosk_order_time_mean, loaded.counter_order_time_mean)
 
     def test_loader_rejects_missing_required_queue_fields_with_value_error(self) -> None:
         scenario_text = "\n".join(

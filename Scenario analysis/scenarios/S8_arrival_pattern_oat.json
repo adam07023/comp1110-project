@@ -1,0 +1,15 @@
+{
+  "pair_id": "S8",
+  "kind": "oat",
+  "description": "Arrival-pattern main effect: uniform versus right-skewed arrivals.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {"run_id": "A", "overrides": {"arrival_pattern": "uniform"}},
+    {"run_id": "B", "overrides": {"arrival_pattern": "right_skewed"}}
+  ],
+  "assertions": [
+    {"metric": "longest_queue_length", "direction": "B > A"},
+    {"metric": "service_level_rate", "direction": "B < A"}
+  ]
+}

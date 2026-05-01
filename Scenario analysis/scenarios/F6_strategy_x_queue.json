@@ -1,0 +1,18 @@
+{
+  "pair_id": "F6",
+  "kind": "factorial",
+  "description": "Strategy x queue type.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "interaction_metric": "average_wait_time",
+  "runs": [
+    {"run_id": "A", "overrides": {"strategy": "fifo_fit", "queue_type": "single_queue"}},
+    {"run_id": "B", "overrides": {"strategy": "best_fit", "queue_type": "single_queue"}},
+    {"run_id": "C", "overrides": {"strategy": "fifo_fit", "queue_type": "queue_by_group_size"}},
+    {"run_id": "D", "overrides": {"strategy": "best_fit", "queue_type": "queue_by_group_size"}}
+  ],
+  "assertions": [
+    {"metric": "average_wait_time", "direction": "B < A"},
+    {"metric": "average_wait_time", "direction": "D < C"}
+  ]
+}

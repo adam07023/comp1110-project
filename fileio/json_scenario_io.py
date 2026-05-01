@@ -15,11 +15,17 @@ def _scenario_to_dict(scenario: Scenario) -> dict[str, object]:
             "queue_type": scenario.queue_type,
             "strategy": scenario.strategy_name,
             "tables": [{"seats": table.seats, "count": table.count} for table in scenario.tables],
-            "servers": scenario.servers,
+            "counters": scenario.counters,
+            "kiosks": scenario.kiosks,
+            "kiosk_usage_percent": scenario.kiosk_usage_percent,
             "counter_order_time_min": scenario.counter_order_time_min,
             "counter_order_time_max": scenario.counter_order_time_max,
             "counter_order_time_mean": scenario.counter_order_time_mean,
             "counter_order_time_sd": scenario.counter_order_time_sd,
+            "kiosk_order_time_min": scenario.kiosk_order_time_min,
+            "kiosk_order_time_max": scenario.kiosk_order_time_max,
+            "kiosk_order_time_mean": scenario.kiosk_order_time_mean,
+            "kiosk_order_time_sd": scenario.kiosk_order_time_sd,
             "reservation_policy": scenario.reservation_policy,
             "reserved_table_percent": scenario.reserved_table_percent,
             "reservation_hold_before_min": scenario.reservation_hold_before_min,
@@ -75,6 +81,10 @@ def load_scenario_json(path: Path) -> Scenario:
         patience_threshold_mean = float(payload.get("patience_threshold_mean", 45.0))
         patience_threshold_sd = float(payload.get("patience_threshold_sd", 10.0))
 
+    counters = int(model_payload.get("counters", model_payload.get("servers", 1)))
+    kiosks = int(model_payload.get("kiosks", 0))
+    default_kiosk_usage = kiosks / (counters + kiosks) if counters + kiosks > 0 else 0.0
+
     scenario = Scenario(
         business_model_name=business_model_name,
         queue_type=queue_type,
@@ -109,11 +119,17 @@ def load_scenario_json(path: Path) -> Scenario:
         patience_threshold_sd=patience_threshold_sd,
         seed=(int(payload["seed"]) if payload.get("seed") is not None else None),
         generated=bool(payload.get("generated", False)),
-        servers=int(model_payload.get("servers", 1)) + int(model_payload.get("kiosks", 0)),
+        counters=counters,
+        kiosks=kiosks,
+        kiosk_usage_percent=float(model_payload.get("kiosk_usage_percent", default_kiosk_usage)),
         counter_order_time_min=int(model_payload.get("counter_order_time_min", 0)),
         counter_order_time_max=int(model_payload.get("counter_order_time_max", 0)),
         counter_order_time_mean=float(model_payload.get("counter_order_time_mean", 0.0)),
         counter_order_time_sd=float(model_payload.get("counter_order_time_sd", 0.0)),
+        kiosk_order_time_min=int(model_payload.get("kiosk_order_time_min", model_payload.get("counter_order_time_min", 0))),
+        kiosk_order_time_max=int(model_payload.get("kiosk_order_time_max", model_payload.get("counter_order_time_max", 0))),
+        kiosk_order_time_mean=float(model_payload.get("kiosk_order_time_mean", model_payload.get("counter_order_time_mean", 0.0))),
+        kiosk_order_time_sd=float(model_payload.get("kiosk_order_time_sd", model_payload.get("counter_order_time_sd", 0.0))),
         reservation_policy=str(model_payload.get("reservation_policy", "none")),
         reserved_table_percent=float(model_payload.get("reserved_table_percent", 0.0)),
         reservation_hold_before_min=int(model_payload.get("reservation_hold_before_min", 0)),

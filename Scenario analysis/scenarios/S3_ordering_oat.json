@@ -1,0 +1,31 @@
+{
+  "pair_id": "S3",
+  "kind": "oat",
+  "description": "Ordering configuration main effect: counter-only versus hybrid kiosk ordering.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {
+      "run_id": "A",
+      "overrides": {
+        "ordering_type": "counter_only",
+        "counters": 3,
+        "kiosks": 0,
+        "kiosk_usage_percent": 0.0
+      }
+    },
+    {
+      "run_id": "B",
+      "overrides": {
+        "ordering_type": "hybrid",
+        "counters": 1,
+        "kiosks": 3,
+        "kiosk_usage_percent": 0.75
+      }
+    }
+  ],
+  "assertions": [
+    {"metric": "average_ordering_wait_time", "direction": "B < A"},
+    {"metric": "served_groups", "direction": "B > A"}
+  ]
+}

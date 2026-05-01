@@ -1,0 +1,18 @@
+{
+  "pair_id": "F4",
+  "kind": "factorial",
+  "description": "Server count x patience.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "interaction_metric": "service_level_rate",
+  "runs": [
+    {"run_id": "A", "overrides": {"counters": 2, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 10.0}},
+    {"run_id": "B", "overrides": {"counters": 4, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 10.0}},
+    {"run_id": "C", "overrides": {"counters": 2, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 30.0}},
+    {"run_id": "D", "overrides": {"counters": 4, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 30.0}}
+  ],
+  "assertions": [
+    {"metric": "service_level_rate", "direction": "B > A"},
+    {"metric": "service_level_rate", "direction": "D > C"}
+  ]
+}

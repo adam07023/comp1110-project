@@ -1,0 +1,355 @@
+{
+  "output_title": "Restaurant Scenario Analysis",
+  "default_seeds": [42, 101, 999],
+  "default_arrival_count": 40,
+  "default_duration": 120,
+  "experiments": [
+    {
+      "scenario_name": "s1_seating_strategy",
+      "base_model": "casual_dining",
+      "description": "Teammate S1 correction: compare simple FIFO fitting with best-fit seating.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ],
+        "servers": 3,
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_fifo_fit",
+          "parameter_overrides": {"strategy": "fifo_fit"}
+        },
+        {
+          "name": "run_b_best_fit",
+          "parameter_overrides": {"strategy": "best_fit"},
+          "expected_metrics_direction": {
+            "average_wait_time": "decrease",
+            "table_utilization_rate": "increase"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "s2_queue_discipline",
+      "base_model": "casual_dining",
+      "description": "Teammate S2 correction: compare one walk-in queue with group-size queues.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ],
+        "servers": 3,
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_single_queue",
+          "parameter_overrides": {"queue_type": "single_queue"}
+        },
+        {
+          "name": "run_b_group_size_queue",
+          "parameter_overrides": {"queue_type": "queue_by_group_size"},
+          "expected_metrics_direction": {
+            "longest_queue_length": "decrease",
+            "service_level_rate": "increase"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "s3_table_inventory",
+      "base_model": "casual_dining",
+      "description": "Capacity planning: compare small-heavy and large-heavy table inventories.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "servers": 3,
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_small_heavy",
+          "parameter_overrides": {
+            "tables": [
+              {"seats": 2, "count": 8},
+              {"seats": 4, "count": 4}
+            ]
+          }
+        },
+        {
+          "name": "run_b_large_heavy",
+          "parameter_overrides": {
+            "tables": [
+              {"seats": 2, "count": 2},
+              {"seats": 4, "count": 4},
+              {"seats": 6, "count": 6}
+            ]
+          },
+          "expected_metrics_direction": {
+            "served_groups": "increase",
+            "rejected_groups": "decrease"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "s4_server_bottleneck",
+      "base_model": "casual_dining",
+      "description": "Teammate S4: compare limited and expanded ordering-server capacity.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ],
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_two_servers",
+          "parameter_overrides": {"servers": 2}
+        },
+        {
+          "name": "run_b_four_servers",
+          "parameter_overrides": {"servers": 4},
+          "expected_metrics_direction": {
+            "average_ordering_wait_time": "decrease",
+            "server_utilization_rate": "decrease"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "s5_patience_sensitivity",
+      "base_model": "casual_dining",
+      "description": "Customer patience sensitivity: compare short and long patience thresholds.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ],
+        "servers": 3
+      },
+      "runs": [
+        {
+          "name": "run_a_low_patience",
+          "parameter_overrides": {"patience_threshold_mean": 10.0}
+        },
+        {
+          "name": "run_b_high_patience",
+          "parameter_overrides": {"patience_threshold_mean": 30.0},
+          "expected_metrics_direction": {
+            "rejected_groups": "decrease",
+            "served_groups": "increase"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "i1_strategy_table_heterogeneity",
+      "base_model": "casual_dining",
+      "description": "Interaction 1: test whether best-fit helps more under heterogeneous table sizes.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "arrival_pattern": "uniform",
+        "servers": 3,
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_fifo_small_heavy",
+          "parameter_overrides": {
+            "strategy": "fifo_fit",
+            "tables": [
+              {"seats": 2, "count": 8},
+              {"seats": 4, "count": 4}
+            ]
+          }
+        },
+        {
+          "name": "run_b_best_small_heavy",
+          "parameter_overrides": {
+            "strategy": "best_fit",
+            "tables": [
+              {"seats": 2, "count": 8},
+              {"seats": 4, "count": 4}
+            ]
+          }
+        },
+        {
+          "name": "run_c_fifo_large_heavy",
+          "parameter_overrides": {
+            "strategy": "fifo_fit",
+            "tables": [
+              {"seats": 2, "count": 2},
+              {"seats": 4, "count": 4},
+              {"seats": 6, "count": 6}
+            ]
+          }
+        },
+        {
+          "name": "run_d_best_large_heavy",
+          "parameter_overrides": {
+            "strategy": "best_fit",
+            "tables": [
+              {"seats": 2, "count": 2},
+              {"seats": 4, "count": 4},
+              {"seats": 6, "count": 6}
+            ]
+          },
+          "expected_metrics_direction": {
+            "average_wait_time": "decrease"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "i2_servers_patience",
+      "base_model": "casual_dining",
+      "description": "Interaction 2: absorb kiosk/counter concept by varying server capacity and patience.",
+      "baseline_overrides": {
+        "queue_type": "single_queue",
+        "strategy": "fifo_fit",
+        "arrival_pattern": "uniform",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ]
+      },
+      "runs": [
+        {
+          "name": "run_a_two_servers_low_patience",
+          "parameter_overrides": {"servers": 2, "patience_threshold_mean": 10.0}
+        },
+        {
+          "name": "run_b_four_servers_low_patience",
+          "parameter_overrides": {"servers": 4, "patience_threshold_mean": 10.0}
+        },
+        {
+          "name": "run_c_two_servers_high_patience",
+          "parameter_overrides": {"servers": 2, "patience_threshold_mean": 30.0}
+        },
+        {
+          "name": "run_d_four_servers_high_patience",
+          "parameter_overrides": {"servers": 4, "patience_threshold_mean": 30.0}
+        }
+      ]
+    },
+    {
+      "scenario_name": "i3_queue_arrival_pattern",
+      "base_model": "casual_dining",
+      "description": "Interaction 3: queue type against uniform and right-skewed arrival patterns.",
+      "baseline_overrides": {
+        "strategy": "fifo_fit",
+        "tables": [
+          {"seats": 2, "count": 4},
+          {"seats": 4, "count": 6}
+        ],
+        "servers": 3,
+        "patience_threshold_mean": 20.0
+      },
+      "runs": [
+        {
+          "name": "run_a_single_uniform",
+          "parameter_overrides": {"queue_type": "single_queue", "arrival_pattern": "uniform"}
+        },
+        {
+          "name": "run_b_group_uniform",
+          "parameter_overrides": {"queue_type": "queue_by_group_size", "arrival_pattern": "uniform"}
+        },
+        {
+          "name": "run_c_single_right_skewed",
+          "parameter_overrides": {"queue_type": "single_queue", "arrival_pattern": "right_skewed"}
+        },
+        {
+          "name": "run_d_group_right_skewed",
+          "parameter_overrides": {
+            "queue_type": "queue_by_group_size",
+            "arrival_pattern": "right_skewed"
+          }
+        }
+      ]
+    },
+    {
+      "scenario_name": "i4_reservations_scarcity",
+      "base_model": "fine_dining",
+      "arrival_count": 32,
+      "duration": 180,
+      "reservation_every_n": 4,
+      "description": "Interaction 4: reservation policy against normal and tight table inventories.",
+      "baseline_overrides": {
+        "queue_type": "queue_by_group_size",
+        "strategy": "best_fit",
+        "arrival_pattern": "right_skewed",
+        "servers": 4,
+        "patience_threshold_mean": 42.0,
+        "reservation_hold_before_min": 15,
+        "reservation_hold_after_min": 15
+      },
+      "runs": [
+        {
+          "name": "run_a_no_reservations_normal_capacity",
+          "parameter_overrides": {
+            "reservation_policy": "none",
+            "reserved_table_percent": 0.0,
+            "tables": [
+              {"seats": 2, "count": 6},
+              {"seats": 4, "count": 8},
+              {"seats": 6, "count": 4}
+            ]
+          }
+        },
+        {
+          "name": "run_b_hybrid_normal_capacity",
+          "parameter_overrides": {
+            "reservation_policy": "hybrid_allocation",
+            "reserved_table_percent": 0.4,
+            "tables": [
+              {"seats": 2, "count": 6},
+              {"seats": 4, "count": 8},
+              {"seats": 6, "count": 4}
+            ]
+          }
+        },
+        {
+          "name": "run_c_no_reservations_tight_capacity",
+          "parameter_overrides": {
+            "reservation_policy": "none",
+            "reserved_table_percent": 0.0,
+            "tables": [
+              {"seats": 2, "count": 2},
+              {"seats": 4, "count": 4},
+              {"seats": 6, "count": 2}
+            ]
+          }
+        },
+        {
+          "name": "run_d_hybrid_tight_capacity",
+          "parameter_overrides": {
+            "reservation_policy": "hybrid_allocation",
+            "reserved_table_percent": 0.4,
+            "tables": [
+              {"seats": 2, "count": 2},
+              {"seats": 4, "count": 4},
+              {"seats": 6, "count": 2}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

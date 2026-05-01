@@ -1,0 +1,18 @@
+{
+  "pair_id": "F1",
+  "kind": "factorial",
+  "description": "Strategy x table inventory.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "interaction_metric": "average_wait_time",
+  "runs": [
+    {"run_id": "A", "overrides": {"strategy": "fifo_fit", "tables": [{"seats": 2, "count": 8}, {"seats": 4, "count": 4}]}},
+    {"run_id": "B", "overrides": {"strategy": "best_fit", "tables": [{"seats": 2, "count": 8}, {"seats": 4, "count": 4}]}},
+    {"run_id": "C", "overrides": {"strategy": "fifo_fit", "tables": [{"seats": 2, "count": 2}, {"seats": 4, "count": 4}, {"seats": 6, "count": 4}]}},
+    {"run_id": "D", "overrides": {"strategy": "best_fit", "tables": [{"seats": 2, "count": 2}, {"seats": 4, "count": 4}, {"seats": 6, "count": 4}]}}
+  ],
+  "assertions": [
+    {"metric": "average_wait_time", "direction": "B < A"},
+    {"metric": "average_wait_time", "direction": "D < C"}
+  ]
+}

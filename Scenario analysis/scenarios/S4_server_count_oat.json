@@ -1,0 +1,15 @@
+{
+  "pair_id": "S4",
+  "kind": "oat",
+  "description": "Server-count main effect: two counters versus four counters.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {"run_id": "A", "overrides": {"counters": 2, "kiosks": 0, "kiosk_usage_percent": 0.0}},
+    {"run_id": "B", "overrides": {"counters": 4, "kiosks": 0, "kiosk_usage_percent": 0.0}}
+  ],
+  "assertions": [
+    {"metric": "average_ordering_wait_time", "direction": "B < A"},
+    {"metric": "service_level_rate", "direction": "B > A"}
+  ]
+}

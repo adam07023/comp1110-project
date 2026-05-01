@@ -1,0 +1,121 @@
+# Framework Specification: Restaurant Scenario Analysis
+
+## Overview
+This document outlines the comprehensive specification for the automated scenario analysis framework for Topic C: Restaurant Queue Simulation. It aligns the experimental plan with the actual parameters and capabilities supported by the simulator, effectively translating conceptual scenarios into executable configurations.
+
+## Step 1: Parameter Classification
+To execute controlled experiments, all simulation parameters must be strictly classified to prevent confounding variables.
+
+### Experimental Factors
+These are the variables actively manipulated in the JSON configuration files to test specific hypotheses:
+* `queue_type`
+* `strategy`
+* `arrival_pattern`
+* `tables`
+* `servers`
+* `patience_threshold_mean`
+* `reservation_policy`
+* `reserved_table_percent`
+
+### Nuisance Parameters
+These are held constant across all casual dining scenarios to isolate the experimental factors. This includes distribution metrics like `counter_order_time_mean`, `counter_order_time_sd`, `patience_threshold_sd`, `reservation_hold_before`, and `reservation_hold_after`.
+
+### Derived Parameters
+Hardcoded boundaries fixed by the `casual_dining` or `fine_dining` baseline models, such as minimum/maximum group sizes and dining durations.
+
+## Step 2: Canonical Baseline Configuration
+All OAT (One-At-a-Time) and Factorial runs will inherit from a base template. Any parameter not explicitly overridden defaults to this baseline.
+
+* **Base Model:** `casual_dining`
+* **Default Queue:** `single_queue`
+* **Default Strategy:** `fifo_fit`
+* **Default Table Inventory:** `2:4,4:6` (four 2-seat tables, six 4-seat tables)
+* **Default Servers:** 3
+* **Default Patience:** `patience_threshold_mean` = 20.0
+* **Default Arrivals:** `uniform`
+
+## Step 3: Single-Factor Pairs (OAT Baseline)
+These pairs test individual variable impacts while holding the baseline constant. They absorb teammate scenarios by mapping their settings to the codebase's valid parameters.
+
+* **S1: Seating Strategy (Teammate S1 Correction)**
+  * *Run A:* `strategy`: `fifo_fit`
+  * *Run B:* `strategy`: `best_fit`
+  * *Note:* Replaces the non-existent `first_available_table` and `exact_size_match` policies.
+* **S2: Queue Discipline (Teammate S2 Correction)**
+  * *Run A:* `queue_type`: `single_queue`
+  * *Run B:* `queue_type`: `queue_by_group_size` (Automatically splits groups into 1-2, 3-4, and 5+ queues)
+* **S3: Table Inventory (Capacity Planning)**
+  * *Run A (Small-heavy):* `tables`: `2:8,4:4` (16 small seats, 16 medium seats)
+  * *Run B (Large-heavy):* `tables`: `2:2,4:4,6:6` (4 small, 16 medium, 36 large)
+* **S4: Server Bottleneck (Teammate S4)**
+  * *Run A:* `servers`: 2
+  * *Run B:* `servers`: 4
+* **S5: Customer Patience Sensitivity**
+  * *Run A:* `patience_threshold_mean`: 10.0
+  * *Run B:* `patience_threshold_mean`: 30.0
+
+## Step 4: Factorial Interaction Pairs
+These 2×2 scenarios test how two variables influence one another.
+
+### Interaction 1: Strategy × Table Heterogeneity
+Tests if `best_fit` outperforms `fifo_fit` more significantly when table sizes vary wildly.
+* **Run A:** `strategy`: `fifo_fit` | `tables`: `2:8,4:4`
+* **Run B:** `strategy`: `best_fit` | `tables`: `2:8,4:4`
+* **Run C:** `strategy`: `fifo_fit` | `tables`: `2:2,4:4,6:6`
+* **Run D:** `strategy`: `best_fit` | `tables`: `2:2,4:4,6:6`
+
+### Interaction 2: Servers × Customer Patience (Teammate S3 Correction)
+Absorbs the "kiosk vs counter" scenario, as the program seamlessly merges kiosk capacity into the simplified `servers` count.
+* **Run A:** `servers`: 2 | `patience_threshold_mean`: 10.0
+* **Run B:** `servers`: 4 | `patience_threshold_mean`: 10.0
+* **Run C:** `servers`: 2 | `patience_threshold_mean`: 30.0
+* **Run D:** `servers`: 4 | `patience_threshold_mean`: 30.0
+
+### Interaction 3: Queue Type × Arrival Pattern
+Tests if separating queues mitigates wait times when arrivals are clustered rather than evenly spread.
+* **Run A:** `queue_type`: `single_queue` | `arrival_pattern`: `uniform`
+* **Run B:** `queue_type`: `queue_by_group_size` | `arrival_pattern`: `uniform`
+* **Run C:** `queue_type`: `single_queue` | `arrival_pattern`: `right_skewed`
+* **Run D:** `queue_type`: `queue_by_group_size` | `arrival_pattern`: `right_skewed`
+
+### Interaction 4: Reservation Policy × Table Scarcity (Teammate S5 Correction)
+Uses the `fine_dining` preset as a base. Tests if holding tables causes excessive idle time when total capacity is constrained.
+* **Run A:** `reservation_policy`: `none` | `tables`: `2:6,4:8,6:4`
+* **Run B:** `reservation_policy`: `hybrid_allocation`, `reserved_table_percent`: 0.4 | `tables`: `2:6,4:8,6:4`
+* **Run C:** `reservation_policy`: `none` | `tables`: `2:2,4:4,6:2` (Tight inventory)
+* **Run D:** `reservation_policy`: `hybrid_allocation`, `reserved_table_percent`: 0.4 | `tables`: `2:2,4:4,6:2`
+
+## Step 5: Replication Protocol
+To account for stochastic noise generated by the `generation/randomizer.py` file, the automation framework must execute every configuration using an array of random seeds (e.g., `[42, 101, 999]`). Metrics for reporting must be the calculated mean of these replications.
+
+## Step 6: Metric Collection Matrix
+The runner script must parse the result reports produced by the simulator and extract the following exact metrics for automated comparison:
+* **Wait Times:** Average, minimum, and maximum total wait time.
+* **Wait Breakdown:** Total wait time by group size, average ordering wait, and ordering wait by group size.
+* **Capacity Metrics:** Table utilization and server utilization.
+* **Queue Health:** Overall maximum queue length and per-queue maximum lengths (e.g., `1-2`, `3-4`, `5+`).
+* **Throughput & Drops:** Groups served, rejected, abandonments during ordering/seating, and service level percentage (groups seated within threshold).
+
+## Step 7: Automation Architecture & Config Schema
+The framework will utilize a configuration loader that processes JSON specification files. The automation script will read this object, map the parameters to the simulator, loop through the assigned seeds, and assert if the outcome matches expectations.
+
+### JSON Schema Template
+```json
+{
+  "scenario_name": "interaction_1_run_d",
+  "base_model": "casual_dining",
+  "seeds": [42, 101, 999],
+  "parameter_overrides": {
+    "strategy": "best_fit",
+    "tables": [
+      {"seats": 2, "count": 2},
+      {"seats": 4, "count": 4},
+      {"seats": 6, "count": 6}
+    ]
+  },
+  "expected_metrics_direction": {
+    "average_wait_time": "decrease",
+    "table_utilization": "increase"
+  }
+}
+```

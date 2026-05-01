@@ -45,12 +45,15 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(scenario.business_model_name, "custom_cafe")
         self.assertEqual(len(scenario.arrivals), 3)
 
-    def test_generation_carries_server_configuration(self) -> None:
-        model = get_builtin_models()["cafe"]
+    def test_generation_carries_ordering_resource_configuration(self) -> None:
+        model = get_builtin_models()["fast_food"]
         scenario = generate_random_scenario(model, seed=21, arrival_count=3, duration=20)
 
-        self.assertEqual(scenario.servers, model.servers)
+        self.assertEqual(scenario.counters, model.counters)
+        self.assertEqual(scenario.kiosks, model.kiosks)
+        self.assertEqual(scenario.kiosk_usage_percent, model.kiosk_usage_percent)
         self.assertEqual(scenario.counter_order_time_mean, model.counter_order_time_mean)
+        self.assertEqual(scenario.kiosk_order_time_mean, model.kiosk_order_time_mean)
 
     def test_generated_arrivals_are_sorted_by_arrival_time(self) -> None:
         model = get_builtin_models()["fast_food"]

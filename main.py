@@ -5,6 +5,9 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
+from analysis.config import load_analysis_config
+from analysis.report_writer import write_analysis_reports
+from analysis.runner import run_analysis_suite
 from domain.business_model import BusinessModel
 from domain.models import GroupArrival, Scenario, SimulationResult
 from fileio.result_writer import write_result_file
@@ -69,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--scenario", required=True)
     run.add_argument("--output")
 
+    analyze = subparsers.add_parser(
+        "analyze", help="Run automated replicated scenario analysis"
+    )
+    analyze.add_argument("--config", required=True)
+    analyze.add_argument("--output-dir", required=True)
+    analyze.add_argument("--seeds")
+    analyze.add_argument("--strict-expectations", action="store_true")
+    analyze.add_argument("--write-scenarios", action="store_true")
+
     subparsers.add_parser("gui", help="Launch the PyQt GUI")
 
     return parser
@@ -121,6 +133,34 @@ def command_run(scenario_path: str, output: str | None) -> int:
         print(f"Wrote simulation result to {output}")
     else:
         print(result.statistics.to_pretty_text())
+    return 0
+
+
+def command_analyze(
+    config_path: str,
+    output_dir: str,
+    seeds: str | None = None,
+    strict_expectations: bool = False,
+    write_scenarios: bool = False,
+) -> int:
+    suite = load_analysis_config(Path(config_path))
+    if seeds:
+        suite = suite.__class__(
+            experiments=suite.experiments,
+            default_seeds=[int(seed.strip()) for seed in seeds.split(",") if seed.strip()],
+            default_arrival_count=suite.default_arrival_count,
+            default_duration=suite.default_duration,
+            output_title=suite.output_title,
+        )
+    target_dir = Path(output_dir)
+    result = run_analysis_suite(
+        suite,
+        output_dir=target_dir,
+        write_scenarios=write_scenarios,
+        strict_expectations=strict_expectations,
+    )
+    write_analysis_reports(target_dir, result)
+    print(f"Wrote analysis report to {target_dir}")
     return 0
 
 
@@ -251,6 +291,14 @@ def main() -> int:
             return command_generate(args.model, args.output, args.seed, args.arrival_count, args.duration)
         if args.command == "run":
             return command_run(args.scenario, args.output)
+        if args.command == "analyze":
+            return command_analyze(
+                args.config,
+                args.output_dir,
+                args.seeds,
+                args.strict_expectations,
+                args.write_scenarios,
+            )
         if args.command == "gui":
             return command_gui()
     except ValueError as error:

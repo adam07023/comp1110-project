@@ -7,7 +7,7 @@ The project can be used through either a command-line interface or a PyQt6 graph
 ## Features
 
 - Built-in restaurant presets: `fast_food`, `fine_dining`, `casual_dining`, `cafe`, and `food_truck`.
-- Custom restaurant setup in the GUI, including table inventory, queue type, seating strategy, arrival pattern, servers, order-time distribution, reservations, patience, and dining-duration distribution.
+- Custom restaurant setup in the GUI, including table inventory, queue type, seating strategy, arrival pattern, servers (counters + kiosks), order-time distribution, reservations, patience, and dining-duration distribution.
 - Queue types:
   - `single_queue`: all waiting groups share one queue.
   - `queue_by_group_size`: waiting groups are split into coarse queues `1-2`, `3-4`, and `5+`.
@@ -106,12 +106,12 @@ Each restaurant setting has:
 - table inventory (`seats`, `count`)
 - queue type
 - seating strategy
-- server count
+- server count (`servers` includes both counters and kiosks)
 - order-time distribution
 - patience distribution
 - reservation policy
 
-For most restaurants, groups first wait for an ordering server, complete ordering, then wait for a suitable table. For `food_truck`, ordering is the service itself: the two 1-seat table slots represent the service positions, and `dining_duration` represents order/pickup service time.
+For most restaurants, groups first wait for an ordering resource (counter or kiosk), complete ordering, then wait for a suitable table. For `food_truck`, ordering is the service itself: the two 1-seat table slots represent the service positions, and `dining_duration` represents order/pickup service time.
 
 ## JSON Scenario Example
 
@@ -125,7 +125,9 @@ For most restaurants, groups first wait for an ordering server, complete orderin
       {"seats": 2, "count": 8},
       {"seats": 4, "count": 4}
     ],
-    "servers": 4,
+    "counters": 1,
+    "kiosks": 3,
+    "kiosk_usage_percent": 0.75,
     "counter_order_time_min": 1,
     "counter_order_time_max": 4,
     "counter_order_time_mean": 2,
@@ -165,4 +167,4 @@ The result report includes:
 - Groups larger than the largest table capacity are rejected.
 - Departure events at a timestamp are processed before arrivals at the same timestamp.
 - Groups whose wait exceeds their patience threshold leave and are recorded as rejected due to patience.
-- JSON loading accepts older files that include kiosk fields by merging old kiosk capacity into the simplified `servers` count.
+- In JSON scenarios, you can provide either `servers` (combined ordering capacity) or explicit `counters` and `kiosks`.

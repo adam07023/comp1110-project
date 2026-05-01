@@ -1,0 +1,291 @@
+[summary]
+business_model=casual_dining
+queue_type=single_queue
+strategy=fifo_fit
+
+[tables]
+# seats_per_table, table_count
+2,5
+4,6
+6,2
+
+[arrivals]
+# arrival_time, group_size, dining_duration, patience, is_reservation, scheduled_time
+33,1,89,16,false,
+56,4,52,26,false,
+60,2,62,21,false,
+64,4,60,29,false,
+65,1,78,29,false,
+69,2,60,29,false,
+69,5,72,20,false,
+71,5,58,28,false,
+72,3,58,18,false,
+76,3,41,25,false,
+76,2,80,17,false,
+77,4,57,15,false,
+77,4,64,24,false,
+79,5,65,39,false,
+80,5,50,21,false,
+80,1,69,17,false,
+86,2,59,22,false,
+86,2,75,21,false,
+86,3,64,24,false,
+88,1,57,15,false,
+89,2,58,13,false,
+90,4,51,38,false,
+91,2,57,28,false,
+91,3,51,18,false,
+93,1,64,10,false,
+94,1,55,21,false,
+96,3,68,12,false,
+96,2,66,21,false,
+96,2,78,14,false,
+96,4,61,28,false,
+97,2,59,25,false,
+101,1,76,25,false,
+104,5,45,24,false,
+105,3,70,15,false,
+106,1,61,32,false,
+107,3,62,20,false,
+107,1,66,31,false,
+109,3,75,33,false,
+114,2,66,22,false,
+119,1,63,13,false,
+
+[statistics]
+served_groups=21
+rejected_groups=19
+total_groups=40
+average_wait_time=10.38
+min_wait_time=2
+max_wait_time=29
+longest_queue_length=15
+shortest_queue_length=0
+table_utilization_rate=0.5024
+simulation_end_time=207
+service_level_threshold=20
+service_level_rate=0.7619
+average_ordering_wait_time=0.14
+server_utilization_rate=0.1916
+abandoned_at_ordering=0
+abandoned_at_seating=19
+reservation_groups_served=0
+reservation_no_shows=0
+reservation_tables_released=0
+max_queue_length_queue_all=14
+average_wait_group_size_1=14.40
+average_wait_group_size_2=7.00
+average_wait_group_size_3=14.40
+average_wait_group_size_4=8.00
+average_wait_group_size_5=3.00
+average_ordering_wait_group_size_1=0.40
+average_ordering_wait_group_size_2=0.00
+average_ordering_wait_group_size_3=0.00
+average_ordering_wait_group_size_4=0.20
+average_ordering_wait_group_size_5=0.00
+
+[rejections]
+# group_id, reason
+G16,left_due_to_patience
+G15,left_due_to_patience
+G21,left_due_to_patience
+G20,left_due_to_patience
+G25,left_due_to_patience
+G18,left_due_to_patience
+G17,left_due_to_patience
+G27,left_due_to_patience
+G24,left_due_to_patience
+G29,left_due_to_patience
+G26,left_due_to_patience
+G28,left_due_to_patience
+G14,left_due_to_patience
+G23,left_due_to_patience
+G34,left_due_to_patience
+G31,left_due_to_patience
+G30,left_due_to_patience
+G33,left_due_to_patience
+G40,left_due_to_patience
+
+[event_log]
+# timestamp, event_type, group_id, table_id, queue_size, message, metadata
+33,arrival,G1,,0,Group G1 arrived,dining_duration=89;group_size=1;leave_time=49;patience_threshold=16
+33,order_start,G1,,0,Group G1 started ordering at counter,order_channel=counter;order_duration=2
+35,order_complete,G1,,0,Group G1 completed ordering,
+35,seated,G1,T1,0,Seated group G1 at table T1,table_size=2;wait_time=2
+56,arrival,G2,,0,Group G2 arrived,dining_duration=52;group_size=4;leave_time=82;patience_threshold=26
+56,order_start,G2,,0,Group G2 started ordering at counter,order_channel=counter;order_duration=2
+58,order_complete,G2,,0,Group G2 completed ordering,
+58,seated,G2,T10,0,Seated group G2 at table T10,table_size=4;wait_time=2
+60,arrival,G3,,0,Group G3 arrived,dining_duration=62;group_size=2;leave_time=81;patience_threshold=21
+60,order_start,G3,,0,Group G3 started ordering at counter,order_channel=counter;order_duration=3
+63,order_complete,G3,,0,Group G3 completed ordering,
+63,seated,G3,T2,0,Seated group G3 at table T2,table_size=2;wait_time=3
+64,arrival,G4,,0,Group G4 arrived,dining_duration=60;group_size=4;leave_time=93;patience_threshold=29
+64,order_start,G4,,0,Group G4 started ordering at counter,order_channel=counter;order_duration=2
+65,arrival,G5,,0,Group G5 arrived,dining_duration=78;group_size=1;leave_time=94;patience_threshold=29
+65,order_start,G5,,0,Group G5 started ordering at counter,order_channel=counter;order_duration=4
+66,order_complete,G4,,0,Group G4 completed ordering,
+66,seated,G4,T11,0,Seated group G4 at table T11,table_size=4;wait_time=2
+69,order_complete,G5,,0,Group G5 completed ordering,
+69,seated,G5,T3,0,Seated group G5 at table T3,table_size=2;wait_time=4
+69,arrival,G6,,0,Group G6 arrived,dining_duration=60;group_size=2;leave_time=98;patience_threshold=29
+69,order_start,G6,,0,Group G6 started ordering at counter,order_channel=counter;order_duration=2
+69,arrival,G7,,0,Group G7 arrived,dining_duration=72;group_size=5;leave_time=89;patience_threshold=20
+69,order_start,G7,,0,Group G7 started ordering at counter,order_channel=counter;order_duration=3
+71,order_complete,G6,,0,Group G6 completed ordering,
+71,seated,G6,T4,0,Seated group G6 at table T4,table_size=2;wait_time=2
+71,arrival,G8,,0,Group G8 arrived,dining_duration=58;group_size=5;leave_time=99;patience_threshold=28
+71,order_start,G8,,0,Group G8 started ordering at counter,order_channel=counter;order_duration=3
+72,order_complete,G7,,0,Group G7 completed ordering,
+72,seated,G7,T12,0,Seated group G7 at table T12,table_size=6;wait_time=3
+72,arrival,G9,,0,Group G9 arrived,dining_duration=58;group_size=3;leave_time=90;patience_threshold=18
+72,order_start,G9,,0,Group G9 started ordering at counter,order_channel=counter;order_duration=4
+74,order_complete,G8,,0,Group G8 completed ordering,
+74,seated,G8,T13,0,Seated group G8 at table T13,table_size=6;wait_time=3
+76,order_complete,G9,,0,Group G9 completed ordering,
+76,seated,G9,T6,0,Seated group G9 at table T6,table_size=4;wait_time=4
+76,arrival,G10,,0,Group G10 arrived,dining_duration=41;group_size=3;leave_time=101;patience_threshold=25
+76,order_start,G10,,0,Group G10 started ordering at counter,order_channel=counter;order_duration=2
+76,arrival,G11,,0,Group G11 arrived,dining_duration=80;group_size=2;leave_time=93;patience_threshold=17
+76,order_start,G11,,0,Group G11 started ordering at counter,order_channel=counter;order_duration=3
+77,arrival,G12,,0,Group G12 arrived,dining_duration=57;group_size=4;leave_time=92;patience_threshold=15
+77,order_start,G12,,0,Group G12 started ordering at counter,order_channel=counter;order_duration=3
+77,arrival,G13,,0,Group G13 arrived,dining_duration=64;group_size=4;leave_time=101;patience_threshold=24
+78,order_complete,G10,,1,Group G10 completed ordering,
+78,order_start,G13,,1,Group G13 started ordering at counter,order_channel=counter;order_duration=3
+78,seated,G10,T7,0,Seated group G10 at table T7,table_size=4;wait_time=2
+79,order_complete,G11,,0,Group G11 completed ordering,
+79,seated,G11,T5,0,Seated group G11 at table T5,table_size=2;wait_time=3
+79,arrival,G14,,0,Group G14 arrived,dining_duration=65;group_size=5;leave_time=118;patience_threshold=39
+79,order_start,G14,,0,Group G14 started ordering at counter,order_channel=counter;order_duration=2
+80,order_complete,G12,,0,Group G12 completed ordering,
+80,seated,G12,T8,0,Seated group G12 at table T8,table_size=4;wait_time=3
+80,arrival,G15,,0,Group G15 arrived,dining_duration=50;group_size=5;leave_time=101;patience_threshold=21
+80,order_start,G15,,0,Group G15 started ordering at counter,order_channel=counter;order_duration=3
+80,arrival,G16,,0,Group G16 arrived,dining_duration=69;group_size=1;leave_time=97;patience_threshold=17
+81,order_complete,G13,,1,Group G13 completed ordering,
+81,order_start,G16,,1,Group G16 started ordering at counter,order_channel=counter;order_duration=2
+81,seated,G13,T9,0,Seated group G13 at table T9,table_size=4;wait_time=4
+81,order_complete,G14,,0,Group G14 completed ordering,
+83,order_complete,G15,,1,Group G15 completed ordering,
+83,order_complete,G16,,2,Group G16 completed ordering,
+86,arrival,G17,,3,Group G17 arrived,dining_duration=59;group_size=2;leave_time=108;patience_threshold=22
+86,order_start,G17,,3,Group G17 started ordering at counter,order_channel=counter;order_duration=3
+86,arrival,G18,,3,Group G18 arrived,dining_duration=75;group_size=2;leave_time=107;patience_threshold=21
+86,order_start,G18,,3,Group G18 started ordering at counter,order_channel=counter;order_duration=2
+86,arrival,G19,,3,Group G19 arrived,dining_duration=64;group_size=3;leave_time=110;patience_threshold=24
+86,order_start,G19,,3,Group G19 started ordering at counter,order_channel=counter;order_duration=3
+88,order_complete,G18,,3,Group G18 completed ordering,
+88,arrival,G20,,4,Group G20 arrived,dining_duration=57;group_size=1;leave_time=103;patience_threshold=15
+88,order_start,G20,,4,Group G20 started ordering at counter,order_channel=counter;order_duration=3
+89,order_complete,G17,,4,Group G17 completed ordering,
+89,order_complete,G19,,5,Group G19 completed ordering,
+89,arrival,G21,,6,Group G21 arrived,dining_duration=58;group_size=2;leave_time=102;patience_threshold=13
+89,order_start,G21,,6,Group G21 started ordering at counter,order_channel=counter;order_duration=4
+90,arrival,G22,,6,Group G22 arrived,dining_duration=51;group_size=4;leave_time=128;patience_threshold=38
+90,order_start,G22,,6,Group G22 started ordering at counter,order_channel=counter;order_duration=2
+91,order_complete,G20,,6,Group G20 completed ordering,
+91,arrival,G23,,7,Group G23 arrived,dining_duration=57;group_size=2;leave_time=119;patience_threshold=28
+91,order_start,G23,,7,Group G23 started ordering at counter,order_channel=counter;order_duration=2
+91,arrival,G24,,7,Group G24 arrived,dining_duration=51;group_size=3;leave_time=109;patience_threshold=18
+92,order_complete,G22,,8,Group G22 completed ordering,
+92,order_start,G24,,8,Group G24 started ordering at counter,order_channel=counter;order_duration=4
+93,order_complete,G21,,8,Group G21 completed ordering,
+93,order_complete,G23,,9,Group G23 completed ordering,
+93,arrival,G25,,10,Group G25 arrived,dining_duration=64;group_size=1;leave_time=103;patience_threshold=10
+93,order_start,G25,,10,Group G25 started ordering at counter,order_channel=counter;order_duration=2
+94,arrival,G26,,10,Group G26 arrived,dining_duration=55;group_size=1;leave_time=115;patience_threshold=21
+94,order_start,G26,,10,Group G26 started ordering at counter,order_channel=counter;order_duration=4
+95,order_complete,G25,,10,Group G25 completed ordering,
+96,order_complete,G24,,11,Group G24 completed ordering,
+96,arrival,G27,,12,Group G27 arrived,dining_duration=68;group_size=3;leave_time=108;patience_threshold=12
+96,order_start,G27,,12,Group G27 started ordering at counter,order_channel=counter;order_duration=3
+96,arrival,G28,,12,Group G28 arrived,dining_duration=66;group_size=2;leave_time=117;patience_threshold=21
+96,order_start,G28,,12,Group G28 started ordering at counter,order_channel=counter;order_duration=3
+96,arrival,G29,,12,Group G29 arrived,dining_duration=78;group_size=2;leave_time=110;patience_threshold=14
+96,arrival,G30,,13,Group G30 arrived,dining_duration=61;group_size=4;leave_time=124;patience_threshold=28
+97,abandonment,G16,,13,Group G16 left during seating due to patience limit,stage=seating;waited_time=17
+97,arrival,G31,,13,Group G31 arrived,dining_duration=59;group_size=2;leave_time=122;patience_threshold=25
+98,order_complete,G26,,14,Group G26 completed ordering,
+98,order_start,G29,,14,Group G29 started ordering at counter,order_channel=counter;order_duration=4
+99,order_complete,G27,,14,Group G27 completed ordering,
+99,order_start,G30,,14,Group G30 started ordering at counter,order_channel=counter;order_duration=4
+99,order_complete,G28,,14,Group G28 completed ordering,
+99,order_start,G31,,14,Group G31 started ordering at counter,order_channel=counter;order_duration=3
+101,abandonment,G15,,13,Group G15 left during seating due to patience limit,stage=seating;waited_time=21
+101,arrival,G32,,13,Group G32 arrived,dining_duration=76;group_size=1;leave_time=126;patience_threshold=25
+102,abandonment,G21,,13,Group G21 left during seating due to patience limit,stage=seating;waited_time=13
+102,order_complete,G29,,13,Group G29 completed ordering,
+102,order_start,G32,,13,Group G32 started ordering at counter,order_channel=counter;order_duration=4
+102,order_complete,G31,,13,Group G31 completed ordering,
+103,abandonment,G20,,13,Group G20 left during seating due to patience limit,stage=seating;waited_time=15
+103,abandonment,G25,,12,Group G25 left during seating due to patience limit,stage=seating;waited_time=10
+103,order_complete,G30,,12,Group G30 completed ordering,
+104,arrival,G33,,13,Group G33 arrived,dining_duration=45;group_size=5;leave_time=128;patience_threshold=24
+104,order_start,G33,,13,Group G33 started ordering at counter,order_channel=counter;order_duration=3
+105,arrival,G34,,13,Group G34 arrived,dining_duration=70;group_size=3;leave_time=120;patience_threshold=15
+105,order_start,G34,,13,Group G34 started ordering at counter,order_channel=counter;order_duration=3
+106,order_complete,G32,,13,Group G32 completed ordering,
+106,arrival,G35,,14,Group G35 arrived,dining_duration=61;group_size=1;leave_time=138;patience_threshold=32
+106,order_start,G35,,14,Group G35 started ordering at counter,order_channel=counter;order_duration=3
+107,abandonment,G18,,13,Group G18 left during seating due to patience limit,stage=seating;waited_time=21
+107,order_complete,G33,,13,Group G33 completed ordering,
+107,arrival,G36,,14,Group G36 arrived,dining_duration=62;group_size=3;leave_time=127;patience_threshold=20
+107,order_start,G36,,14,Group G36 started ordering at counter,order_channel=counter;order_duration=4
+107,arrival,G37,,14,Group G37 arrived,dining_duration=66;group_size=1;leave_time=138;patience_threshold=31
+108,abandonment,G17,,14,Group G17 left during seating due to patience limit,stage=seating;waited_time=22
+108,abandonment,G27,,13,Group G27 left during seating due to patience limit,stage=seating;waited_time=12
+108,order_complete,G34,,13,Group G34 completed ordering,
+108,order_start,G37,,13,Group G37 started ordering at counter,order_channel=counter;order_duration=3
+109,abandonment,G24,,12,Group G24 left during seating due to patience limit,stage=seating;waited_time=18
+109,order_complete,G35,,12,Group G35 completed ordering,
+109,arrival,G38,,13,Group G38 arrived,dining_duration=75;group_size=3;leave_time=142;patience_threshold=33
+109,order_start,G38,,13,Group G38 started ordering at counter,order_channel=counter;order_duration=3
+110,departure,G2,T10,13,Group G2 left table T10,
+110,seated,G19,T10,12,Seated group G19 at table T10,table_size=4;wait_time=24
+110,abandonment,G29,,11,Group G29 left during seating due to patience limit,stage=seating;waited_time=14
+111,order_complete,G36,,11,Group G36 completed ordering,
+111,order_complete,G37,,12,Group G37 completed ordering,
+112,order_complete,G38,,13,Group G38 completed ordering,
+114,arrival,G39,,14,Group G39 arrived,dining_duration=66;group_size=2;leave_time=136;patience_threshold=22
+114,order_start,G39,,14,Group G39 started ordering at counter,order_channel=counter;order_duration=4
+115,abandonment,G26,,13,Group G26 left during seating due to patience limit,stage=seating;waited_time=21
+117,abandonment,G28,,12,Group G28 left during seating due to patience limit,stage=seating;waited_time=21
+118,abandonment,G14,,11,Group G14 left during seating due to patience limit,stage=seating;waited_time=39
+118,order_complete,G39,,11,Group G39 completed ordering,
+119,departure,G10,T7,12,Group G10 left table T7,
+119,seated,G22,T7,11,Seated group G22 at table T7,table_size=4;wait_time=29
+119,abandonment,G23,,10,Group G23 left during seating due to patience limit,stage=seating;waited_time=28
+119,arrival,G40,,10,Group G40 arrived,dining_duration=63;group_size=1;leave_time=132;patience_threshold=13
+119,order_start,G40,,10,Group G40 started ordering at counter,order_channel=counter;order_duration=3
+120,abandonment,G34,,9,Group G34 left during seating due to patience limit,stage=seating;waited_time=15
+122,abandonment,G31,,8,Group G31 left during seating due to patience limit,stage=seating;waited_time=25
+122,order_complete,G40,,8,Group G40 completed ordering,
+124,departure,G1,T1,9,Group G1 left table T1,
+124,seated,G32,T1,8,Seated group G32 at table T1,table_size=2;wait_time=23
+124,abandonment,G30,,7,Group G30 left during seating due to patience limit,stage=seating;waited_time=28
+125,departure,G3,T2,7,Group G3 left table T2,
+125,seated,G35,T2,6,Seated group G35 at table T2,table_size=2;wait_time=19
+126,departure,G4,T11,6,Group G4 left table T11,
+126,seated,G36,T11,5,Seated group G36 at table T11,table_size=4;wait_time=19
+128,abandonment,G33,,4,Group G33 left during seating due to patience limit,stage=seating;waited_time=24
+131,departure,G6,T4,4,Group G6 left table T4,
+131,seated,G37,T4,3,Seated group G37 at table T4,table_size=2;wait_time=24
+132,departure,G8,T13,3,Group G8 left table T13,
+132,seated,G38,T13,2,Seated group G38 at table T13,table_size=6;wait_time=23
+132,abandonment,G40,,1,Group G40 left during seating due to patience limit,stage=seating;waited_time=13
+134,departure,G9,T6,1,Group G9 left table T6,
+134,seated,G39,T6,0,Seated group G39 at table T6,table_size=4;wait_time=20
+137,departure,G12,T8,0,Group G12 left table T8,
+144,departure,G7,T12,0,Group G7 left table T12,
+145,departure,G13,T9,0,Group G13 left table T9,
+147,departure,G5,T3,0,Group G5 left table T3,
+159,departure,G11,T5,0,Group G11 left table T5,
+170,departure,G22,T7,0,Group G22 left table T7,
+174,departure,G19,T10,0,Group G19 left table T10,
+186,departure,G35,T2,0,Group G35 left table T2,
+188,departure,G36,T11,0,Group G36 left table T11,
+197,departure,G37,T4,0,Group G37 left table T4,
+200,departure,G32,T1,0,Group G32 left table T1,
+200,departure,G39,T6,0,Group G39 left table T6,
+207,departure,G38,T13,0,Group G38 left table T13,

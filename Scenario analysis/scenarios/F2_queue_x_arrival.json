@@ -1,0 +1,18 @@
+{
+  "pair_id": "F2",
+  "kind": "factorial",
+  "description": "Queue type x arrival pattern.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "interaction_metric": "service_level_rate",
+  "runs": [
+    {"run_id": "A", "overrides": {"queue_type": "single_queue", "arrival_pattern": "uniform"}},
+    {"run_id": "B", "overrides": {"queue_type": "queue_by_group_size", "arrival_pattern": "uniform"}},
+    {"run_id": "C", "overrides": {"queue_type": "single_queue", "arrival_pattern": "right_skewed"}},
+    {"run_id": "D", "overrides": {"queue_type": "queue_by_group_size", "arrival_pattern": "right_skewed"}}
+  ],
+  "assertions": [
+    {"metric": "service_level_rate", "direction": "B > A"},
+    {"metric": "service_level_rate", "direction": "D > C"}
+  ]
+}

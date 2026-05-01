@@ -1,0 +1,18 @@
+{
+  "pair_id": "F3",
+  "kind": "factorial",
+  "description": "Ordering configuration x patience.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "interaction_metric": "served_groups",
+  "runs": [
+    {"run_id": "A", "overrides": {"ordering_type": "counter_only", "counters": 3, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 10.0}},
+    {"run_id": "B", "overrides": {"ordering_type": "hybrid", "counters": 1, "kiosks": 3, "kiosk_usage_percent": 0.75, "patience_mean": 10.0}},
+    {"run_id": "C", "overrides": {"ordering_type": "counter_only", "counters": 3, "kiosks": 0, "kiosk_usage_percent": 0.0, "patience_mean": 30.0}},
+    {"run_id": "D", "overrides": {"ordering_type": "hybrid", "counters": 1, "kiosks": 3, "kiosk_usage_percent": 0.75, "patience_mean": 30.0}}
+  ],
+  "assertions": [
+    {"metric": "served_groups", "direction": "B > A"},
+    {"metric": "served_groups", "direction": "D > C"}
+  ]
+}

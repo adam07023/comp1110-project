@@ -1,0 +1,28 @@
+{
+  "pair_id": "S5",
+  "kind": "oat",
+  "description": "Reservation-policy main effect using a fine-dining base.",
+  "base_model": "fine_dining",
+  "seeds": [42, 123, 999],
+  "reservation_every_n": 4,
+  "runs": [
+    {
+      "run_id": "A",
+      "overrides": {
+        "reservation_policy": "none",
+        "reserved_table_percent": 0.0
+      }
+    },
+    {
+      "run_id": "B",
+      "overrides": {
+        "reservation_policy": "hybrid_allocation",
+        "reserved_table_percent": 0.5
+      }
+    }
+  ],
+  "assertions": [
+    {"metric": "reservation_groups_served", "direction": "B > A"},
+    {"metric": "service_level_rate", "direction": "B < A"}
+  ]
+}

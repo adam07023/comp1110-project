@@ -123,6 +123,22 @@ def load_scenario(path: Path) -> Scenario:
         raise ValueError("Scenario must define queue strategy")
 
     builtin_model = get_builtin_models().get(business_model["name"])
+    default_counters = builtin_model.counters if builtin_model else 1
+    default_kiosks = builtin_model.kiosks if builtin_model else 0
+    default_counter_min = builtin_model.counter_order_time_min if builtin_model else 0
+    default_counter_max = builtin_model.counter_order_time_max if builtin_model else 0
+    default_counter_mean = builtin_model.counter_order_time_mean if builtin_model else 0.0
+    default_counter_sd = builtin_model.counter_order_time_sd if builtin_model else 0.0
+    default_kiosk_min = builtin_model.kiosk_order_time_min if builtin_model else default_counter_min
+    default_kiosk_max = builtin_model.kiosk_order_time_max if builtin_model else default_counter_max
+    default_kiosk_mean = builtin_model.kiosk_order_time_mean if builtin_model else default_counter_mean
+    default_kiosk_sd = builtin_model.kiosk_order_time_sd if builtin_model else default_counter_sd
+    counters = int(ordering.get("counters", ordering.get("servers", default_counters)))
+    kiosks = int(ordering.get("kiosks", default_kiosks))
+    if builtin_model:
+        default_kiosk_usage = builtin_model.kiosk_usage_percent
+    else:
+        default_kiosk_usage = kiosks / (counters + kiosks) if counters + kiosks > 0 else 0.0
 
     mean_threshold = (
         float(patience["mean_threshold"])
@@ -145,14 +161,17 @@ def load_scenario(path: Path) -> Scenario:
         patience_threshold_sd=sd_threshold,
         seed=int(seed["value"]) if seed.get("value") else None,
         generated=seed.get("generated", "false").lower() == "true",
-        servers=(
-            int(ordering.get("servers", builtin_model.servers if builtin_model else 1))
-            + int(ordering.get("kiosks", 0))
-        ),
-        counter_order_time_min=int(ordering.get("order_min", ordering.get("counter_min", builtin_model.counter_order_time_min if builtin_model else 0))),
-        counter_order_time_max=int(ordering.get("order_max", ordering.get("counter_max", builtin_model.counter_order_time_max if builtin_model else 0))),
-        counter_order_time_mean=float(ordering.get("order_mean", ordering.get("counter_mean", builtin_model.counter_order_time_mean if builtin_model else 0.0))),
-        counter_order_time_sd=float(ordering.get("order_sd", ordering.get("counter_sd", builtin_model.counter_order_time_sd if builtin_model else 0.0))),
+        counters=counters,
+        kiosks=kiosks,
+        kiosk_usage_percent=float(ordering.get("kiosk_usage_percent", default_kiosk_usage)),
+        counter_order_time_min=int(ordering.get("order_min", ordering.get("counter_min", default_counter_min))),
+        counter_order_time_max=int(ordering.get("order_max", ordering.get("counter_max", default_counter_max))),
+        counter_order_time_mean=float(ordering.get("order_mean", ordering.get("counter_mean", default_counter_mean))),
+        counter_order_time_sd=float(ordering.get("order_sd", ordering.get("counter_sd", default_counter_sd))),
+        kiosk_order_time_min=int(ordering.get("kiosk_min", ordering.get("order_min", ordering.get("counter_min", default_kiosk_min)))),
+        kiosk_order_time_max=int(ordering.get("kiosk_max", ordering.get("order_max", ordering.get("counter_max", default_kiosk_max)))),
+        kiosk_order_time_mean=float(ordering.get("kiosk_mean", ordering.get("order_mean", ordering.get("counter_mean", default_kiosk_mean)))),
+        kiosk_order_time_sd=float(ordering.get("kiosk_sd", ordering.get("order_sd", ordering.get("counter_sd", default_kiosk_sd)))),
         reservation_policy=reservations.get("policy", builtin_model.reservation_policy if builtin_model else "none"),
         reserved_table_percent=float(reservations.get("reserved_table_percent", builtin_model.reserved_table_percent if builtin_model else 0.0)),
         reservation_hold_before_min=int(reservations.get("hold_before_min", builtin_model.reservation_hold_before_min if builtin_model else 0)),

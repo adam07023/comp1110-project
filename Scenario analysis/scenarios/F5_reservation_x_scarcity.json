@@ -1,0 +1,19 @@
+{
+  "pair_id": "F5",
+  "kind": "factorial",
+  "description": "Reservation policy x table scarcity.",
+  "base_model": "fine_dining",
+  "seeds": [42, 123, 999],
+  "reservation_every_n": 4,
+  "interaction_metric": "service_level_rate",
+  "runs": [
+    {"run_id": "A", "overrides": {"reservation_policy": "none", "reserved_table_percent": 0.0, "tables": [{"seats": 2, "count": 5}, {"seats": 4, "count": 5}, {"seats": 6, "count": 3}]}},
+    {"run_id": "B", "overrides": {"reservation_policy": "hybrid_allocation", "reserved_table_percent": 0.5, "tables": [{"seats": 2, "count": 5}, {"seats": 4, "count": 5}, {"seats": 6, "count": 3}]}},
+    {"run_id": "C", "overrides": {"reservation_policy": "none", "reserved_table_percent": 0.0, "tables": [{"seats": 2, "count": 3}, {"seats": 4, "count": 3}, {"seats": 6, "count": 2}]}},
+    {"run_id": "D", "overrides": {"reservation_policy": "hybrid_allocation", "reserved_table_percent": 0.5, "tables": [{"seats": 2, "count": 3}, {"seats": 4, "count": 3}, {"seats": 6, "count": 2}]}}
+  ],
+  "assertions": [
+    {"metric": "service_level_rate", "direction": "B < A"},
+    {"metric": "service_level_rate", "direction": "D < C"}
+  ]
+}

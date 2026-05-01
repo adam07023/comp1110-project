@@ -1,0 +1,15 @@
+{
+  "pair_id": "S2",
+  "kind": "oat",
+  "description": "Queue type main effect: single queue versus group-size queues.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {"run_id": "A", "overrides": {"queue_type": "single_queue"}},
+    {"run_id": "B", "overrides": {"queue_type": "queue_by_group_size"}}
+  ],
+  "assertions": [
+    {"metric": "longest_queue_length", "direction": "B < A"},
+    {"metric": "service_level_rate", "direction": "B > A"}
+  ]
+}

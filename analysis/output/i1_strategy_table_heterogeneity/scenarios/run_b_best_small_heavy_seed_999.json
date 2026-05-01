@@ -1,0 +1,392 @@
+{
+  "business_model": {
+    "name": "casual_dining",
+    "queue_type": "single_queue",
+    "strategy": "best_fit",
+    "tables": [
+      {
+        "seats": 2,
+        "count": 8
+      },
+      {
+        "seats": 4,
+        "count": 4
+      }
+    ],
+    "servers": 3,
+    "counter_order_time_min": 2,
+    "counter_order_time_max": 6,
+    "counter_order_time_mean": 3,
+    "counter_order_time_sd": 1,
+    "reservation_policy": "none",
+    "reserved_table_percent": 0.0,
+    "reservation_hold_before_min": 0,
+    "reservation_hold_after_min": 0,
+    "patience_threshold_mean": 20.0,
+    "patience_threshold_sd": 8.0
+  },
+  "seed": 999,
+  "generated": true,
+  "arrivals": [
+    {
+      "group_id": "G1",
+      "arrival_time": 5,
+      "group_size": 3,
+      "dining_duration": 70,
+      "patience": 30,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G2",
+      "arrival_time": 12,
+      "group_size": 3,
+      "dining_duration": 49,
+      "patience": 27,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G3",
+      "arrival_time": 13,
+      "group_size": 5,
+      "dining_duration": 53,
+      "patience": 26,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G4",
+      "arrival_time": 20,
+      "group_size": 4,
+      "dining_duration": 81,
+      "patience": 28,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G5",
+      "arrival_time": 20,
+      "group_size": 5,
+      "dining_duration": 62,
+      "patience": 30,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G6",
+      "arrival_time": 21,
+      "group_size": 2,
+      "dining_duration": 70,
+      "patience": 14,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G7",
+      "arrival_time": 23,
+      "group_size": 2,
+      "dining_duration": 63,
+      "patience": 24,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G8",
+      "arrival_time": 30,
+      "group_size": 5,
+      "dining_duration": 85,
+      "patience": 14,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G9",
+      "arrival_time": 33,
+      "group_size": 3,
+      "dining_duration": 44,
+      "patience": 26,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G10",
+      "arrival_time": 35,
+      "group_size": 3,
+      "dining_duration": 82,
+      "patience": 25,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G11",
+      "arrival_time": 42,
+      "group_size": 1,
+      "dining_duration": 67,
+      "patience": 30,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G12",
+      "arrival_time": 45,
+      "group_size": 2,
+      "dining_duration": 68,
+      "patience": 16,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G13",
+      "arrival_time": 46,
+      "group_size": 4,
+      "dining_duration": 74,
+      "patience": 12,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G14",
+      "arrival_time": 48,
+      "group_size": 4,
+      "dining_duration": 56,
+      "patience": 8,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G15",
+      "arrival_time": 49,
+      "group_size": 3,
+      "dining_duration": 44,
+      "patience": 33,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G16",
+      "arrival_time": 54,
+      "group_size": 1,
+      "dining_duration": 76,
+      "patience": 21,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G17",
+      "arrival_time": 56,
+      "group_size": 4,
+      "dining_duration": 68,
+      "patience": 12,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G18",
+      "arrival_time": 59,
+      "group_size": 2,
+      "dining_duration": 70,
+      "patience": 16,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G19",
+      "arrival_time": 62,
+      "group_size": 2,
+      "dining_duration": 53,
+      "patience": 22,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G20",
+      "arrival_time": 63,
+      "group_size": 4,
+      "dining_duration": 63,
+      "patience": 28,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G21",
+      "arrival_time": 72,
+      "group_size": 2,
+      "dining_duration": 43,
+      "patience": 20,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G22",
+      "arrival_time": 74,
+      "group_size": 1,
+      "dining_duration": 55,
+      "patience": 19,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G23",
+      "arrival_time": 74,
+      "group_size": 2,
+      "dining_duration": 70,
+      "patience": 19,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G24",
+      "arrival_time": 76,
+      "group_size": 1,
+      "dining_duration": 42,
+      "patience": 14,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G25",
+      "arrival_time": 78,
+      "group_size": 3,
+      "dining_duration": 68,
+      "patience": 15,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G26",
+      "arrival_time": 79,
+      "group_size": 2,
+      "dining_duration": 46,
+      "patience": 27,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G27",
+      "arrival_time": 91,
+      "group_size": 1,
+      "dining_duration": 54,
+      "patience": 16,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G28",
+      "arrival_time": 92,
+      "group_size": 1,
+      "dining_duration": 64,
+      "patience": 30,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G29",
+      "arrival_time": 92,
+      "group_size": 4,
+      "dining_duration": 64,
+      "patience": 21,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G30",
+      "arrival_time": 93,
+      "group_size": 2,
+      "dining_duration": 49,
+      "patience": 25,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G31",
+      "arrival_time": 94,
+      "group_size": 1,
+      "dining_duration": 74,
+      "patience": 21,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G32",
+      "arrival_time": 95,
+      "group_size": 5,
+      "dining_duration": 47,
+      "patience": 35,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G33",
+      "arrival_time": 96,
+      "group_size": 3,
+      "dining_duration": 68,
+      "patience": 16,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G34",
+      "arrival_time": 101,
+      "group_size": 4,
+      "dining_duration": 66,
+      "patience": 7,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G35",
+      "arrival_time": 103,
+      "group_size": 5,
+      "dining_duration": 87,
+      "patience": 7,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G36",
+      "arrival_time": 103,
+      "group_size": 2,
+      "dining_duration": 59,
+      "patience": 17,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G37",
+      "arrival_time": 105,
+      "group_size": 3,
+      "dining_duration": 69,
+      "patience": 13,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G38",
+      "arrival_time": 116,
+      "group_size": 3,
+      "dining_duration": 51,
+      "patience": 23,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G39",
+      "arrival_time": 118,
+      "group_size": 1,
+      "dining_duration": 57,
+      "patience": 16,
+      "is_reservation": false,
+      "scheduled_time": null
+    },
+    {
+      "group_id": "G40",
+      "arrival_time": 119,
+      "group_size": 5,
+      "dining_duration": 63,
+      "patience": 33,
+      "is_reservation": false,
+      "scheduled_time": null
+    }
+  ]
+}

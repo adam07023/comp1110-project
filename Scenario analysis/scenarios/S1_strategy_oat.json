@@ -1,0 +1,15 @@
+{
+  "pair_id": "S1",
+  "kind": "oat",
+  "description": "Strategy main effect: fifo_fit versus best_fit.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {"run_id": "A", "overrides": {"strategy": "fifo_fit"}},
+    {"run_id": "B", "overrides": {"strategy": "best_fit"}}
+  ],
+  "assertions": [
+    {"metric": "average_wait_time", "direction": "B < A"},
+    {"metric": "table_utilization_rate", "direction": "B > A"}
+  ]
+}

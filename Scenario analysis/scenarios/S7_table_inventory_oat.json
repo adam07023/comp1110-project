@@ -1,0 +1,32 @@
+{
+  "pair_id": "S7",
+  "kind": "oat",
+  "description": "Table-inventory main effect: small-heavy versus large-heavy layout.",
+  "base_model": "casual_dining",
+  "seeds": [42, 123, 999],
+  "runs": [
+    {
+      "run_id": "A",
+      "overrides": {
+        "tables": [
+          {"seats": 2, "count": 8},
+          {"seats": 4, "count": 4}
+        ]
+      }
+    },
+    {
+      "run_id": "B",
+      "overrides": {
+        "tables": [
+          {"seats": 2, "count": 2},
+          {"seats": 4, "count": 4},
+          {"seats": 6, "count": 4}
+        ]
+      }
+    }
+  ],
+  "assertions": [
+    {"metric": "served_groups", "direction": "B > A"},
+    {"metric": "rejected_groups", "direction": "B < A"}
+  ]
+}
