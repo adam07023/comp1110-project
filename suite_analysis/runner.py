@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import mean
 
-from analysis.config import AnalysisSuiteConfig
-from analysis.scenario_builder import build_scenario
+from suite_analysis.config import AnalysisSuiteConfig
+from suite_analysis.scenario_builder import build_scenario
 from domain.models import SimulationResult, SimulationStatistics
 from fileio.json_scenario_io import write_scenario_json
 from fileio.result_writer import write_result_file

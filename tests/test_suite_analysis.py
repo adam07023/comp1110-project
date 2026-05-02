@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from analysis.config import load_analysis_config
-from analysis.runner import run_analysis_suite
-from analysis.scenario_builder import build_scenario
+from suite_analysis.config import load_analysis_config
+from suite_analysis.runner import run_analysis_suite
+from suite_analysis.scenario_builder import build_scenario
 from main import build_parser, command_analyze
 
 
@@ -44,7 +44,7 @@ def _tiny_config() -> dict[str, object]:
     }
 
 
-class AnalysisConfigTests(unittest.TestCase):
+class SuiteAnalysisConfigTests(unittest.TestCase):
     def test_load_analysis_config_accepts_valid_suite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "suite.json"
@@ -69,7 +69,7 @@ class AnalysisConfigTests(unittest.TestCase):
                 load_analysis_config(path)
 
 
-class AnalysisScenarioBuilderTests(unittest.TestCase):
+class SuiteAnalysisScenarioBuilderTests(unittest.TestCase):
     def test_build_scenario_applies_baseline_and_run_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "suite.json"
@@ -92,7 +92,7 @@ class AnalysisScenarioBuilderTests(unittest.TestCase):
         self.assertEqual([(table.seats, table.count) for table in scenario.tables], [(2, 2), (4, 1)])
 
 
-class AnalysisRunnerTests(unittest.TestCase):
+class SuiteAnalysisRunnerTests(unittest.TestCase):
     def test_run_analysis_suite_aggregates_metrics_and_expectations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "suite.json"
@@ -111,16 +111,16 @@ class AnalysisRunnerTests(unittest.TestCase):
         )
 
 
-class AnalysisCliTests(unittest.TestCase):
+class SuiteAnalysisCliTests(unittest.TestCase):
     def test_analyze_command_is_available(self) -> None:
         parser = build_parser()
         args = parser.parse_args(
             [
                 "analyze",
                 "--config",
-                "analysis/scenario_suite.json",
+                "suite_analysis/scenario_suite.json",
                 "--output-dir",
-                "analysis/output",
+                "suite_analysis/output",
             ]
         )
 

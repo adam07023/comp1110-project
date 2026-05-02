@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from analysis.config import AnalysisExperimentConfig, AnalysisRunConfig
+from suite_analysis.config import AnalysisExperimentConfig, AnalysisRunConfig
 from domain.business_model import BusinessModel
 from domain.models import GroupArrival, Scenario, TableInventory
 from generation.randomizer import generate_random_scenario

@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 
 
-def load_v2_runner():
+def load_scenario_analysis_runner():
     project_root = Path(__file__).resolve().parents[1]
     runner_path = project_root / "scenario_analysis" / "runner.py"
-    spec = importlib.util.spec_from_file_location("scenario_analysis_v2_runner", runner_path)
+    spec = importlib.util.spec_from_file_location("scenario_analysis_runner", runner_path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -16,9 +16,9 @@ def load_v2_runner():
     return module
 
 
-class ScenarioAnalysisV2Tests(unittest.TestCase):
-    def test_v2_configs_load_all_pairs(self) -> None:
-        runner = load_v2_runner()
+class ScenarioAnalysisTests(unittest.TestCase):
+    def test_pair_configs_load_all_expected_ids(self) -> None:
+        runner = load_scenario_analysis_runner()
 
         configs = runner.load_pair_configs(runner.SCENARIO_DIR)
         pair_ids = {config["pair_id"] for config in configs}
@@ -29,7 +29,7 @@ class ScenarioAnalysisV2Tests(unittest.TestCase):
         self.assertIn("F6", pair_ids)
 
     def test_oat_gate_detects_non_trivial_change(self) -> None:
-        runner = load_v2_runner()
+        runner = load_scenario_analysis_runner()
         raw_rows = [
             {"pair_id": "S1", "run_id": "A", "seed": 1, "average_wait_time": 10.0},
             {"pair_id": "S1", "run_id": "B", "seed": 1, "average_wait_time": 7.0},
@@ -46,7 +46,7 @@ class ScenarioAnalysisV2Tests(unittest.TestCase):
         self.assertEqual(gate_rows[0]["passing_metric"], "average_wait_time")
 
     def test_factorial_interaction_calculates_gap(self) -> None:
-        runner = load_v2_runner()
+        runner = load_scenario_analysis_runner()
         configs = [{"pair_id": "F1", "interaction_metric": "average_wait_time"}]
         summaries = [
             {"pair_id": "F1", "run_id": "A", "average_wait_time_mean": 10.0},
@@ -61,8 +61,8 @@ class ScenarioAnalysisV2Tests(unittest.TestCase):
         self.assertEqual(rows[0]["d_minus_c"], -5.0)
         self.assertEqual(rows[0]["interaction_gap"], 3.0)
 
-    def test_v2_runner_smoke_writes_outputs(self) -> None:
-        runner = load_v2_runner()
+    def test_runner_smoke_writes_outputs(self) -> None:
+        runner = load_scenario_analysis_runner()
         config = {
             "pair_id": "S1",
             "kind": "oat",

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import random
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from analysis.config import load_analysis_config
-from analysis.report_writer import write_analysis_reports
-from analysis.runner import run_analysis_suite
+from suite_analysis.config import load_analysis_config
+from suite_analysis.report_writer import write_analysis_reports
+from suite_analysis.runner import run_analysis_suite
 from domain.business_model import BusinessModel
 from domain.models import GroupArrival, Scenario, SimulationResult
 from fileio.json_scenario_io import load_scenario_json
@@ -49,52 +51,124 @@ def get_model(model_name: str) -> BusinessModel:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Restaurant queue simulation CLI")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Restaurant queue discrete-event simulator: run scenarios, generate queues, "
+            "and batch experiments from a JSON suite (suite_analysis)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  %(prog)s list-models\n"
+            "  %(prog)s run --scenario examples/fast_food_sample.txt\n"
+            "  %(prog)s analyze --config suite_analysis/scenario_suite.json "
+            "--output-dir suite_analysis/output\n"
+            "\n"
+            "Use .txt or .json scenario paths with run; see README.md."
+        ),
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("list-models", help="List built-in business models")
+    subparsers.add_parser("list-models", help="List built-in business models and key parameters")
 
     write_example = subparsers.add_parser(
-        "write-example", help="Write a preset-based example scenario"
+        "write-example", help="Write a preset-based example scenario (.txt)"
     )
-    write_example.add_argument("--model", required=True)
-    write_example.add_argument("--output", required=True)
+    write_example.add_argument("--model", required=True, help="Built-in model name")
+    write_example.add_argument(
+        "--output", required=True, metavar="PATH", help="Output scenario path (.txt)"
+    )
 
     generate = subparsers.add_parser(
-        "generate", help="Generate a random scenario from a built-in model"
+        "generate", help="Generate a random scenario from a built-in model (.txt)"
     )
-    generate.add_argument("--model", required=True)
-    generate.add_argument("--output", required=True)
-    generate.add_argument("--seed", type=int, required=True)
-    generate.add_argument("--arrival-count", type=int, required=True)
-    generate.add_argument("--duration", type=int, required=True)
+    generate.add_argument("--model", required=True, help="Built-in model name")
+    generate.add_argument(
+        "--output", required=True, metavar="PATH", help="Output scenario path (.txt)"
+    )
+    generate.add_argument("--seed", type=int, required=True, help="RNG seed for reproducibility")
+    generate.add_argument(
+        "--arrival-count", type=int, required=True, metavar="N", help="Number of arrival groups"
+    )
+    generate.add_argument(
+        "--duration", type=int, required=True, metavar="MIN", help="Simulation horizon (minutes)"
+    )
 
-    run = subparsers.add_parser("run", help="Run a simulation from a scenario file")
-    run.add_argument("--scenario", required=True)
-    run.add_argument("--output")
+    run = subparsers.add_parser(
+        "run", help="Run one simulation from a scenario file (.txt or .json)"
+    )
+    run.add_argument(
+        "--scenario", required=True, metavar="PATH", help="Path to scenario file"
+    )
+    run.add_argument(
+        "--output",
+        metavar="PATH",
+        help="Write full result report to this path (default: print summary statistics)",
+    )
 
     analyze = subparsers.add_parser(
-        "analyze", help="Run automated replicated scenario analysis"
+        "analyze",
+        help=(
+            "Run all experiments in a JSON suite (replicated seeds, CSV/Markdown reports; "
+            "see suite_analysis/scenario_suite.json)"
+        ),
     )
-    analyze.add_argument("--config", required=True)
-    analyze.add_argument("--output-dir", required=True)
-    analyze.add_argument("--seeds")
-    analyze.add_argument("--strict-expectations", action="store_true")
-    analyze.add_argument("--write-scenarios", action="store_true")
+    analyze.add_argument(
+        "--config",
+        required=True,
+        metavar="PATH",
+        help="Experiment suite JSON (e.g. suite_analysis/scenario_suite.json)",
+    )
+    analyze.add_argument(
+        "--output-dir",
+        required=True,
+        metavar="DIR",
+        help="Directory for analysis_report.md, aggregate_metrics.*, run artifacts",
+    )
+    analyze.add_argument(
+        "--seeds",
+        metavar="S1,S2,...",
+        help="Override default seeds from the suite (comma-separated integers)",
+    )
+    analyze.add_argument(
+        "--strict-expectations",
+        action="store_true",
+        help="Exit with error if a run's metric expectations are not met",
+    )
+    analyze.add_argument(
+        "--write-scenarios",
+        action="store_true",
+        help="Also write generated scenario JSON next to each run's result .txt",
+    )
 
-    subparsers.add_parser("gui", help="Launch the PyQt GUI")
+    subparsers.add_parser("gui", help="Launch the PyQt6 GUI (requires PyQt6)")
 
     return parser
 
 
 def command_list_models() -> int:
     for model in get_builtin_models().values():
+        tables = [(table.seats, table.count) for table in model.tables]
+        if model.reservation_policy != "none":
+            res_info = (
+                f"{model.reservation_policy} "
+                f"(reserved_table_percent={model.reserved_table_percent})"
+            )
+        else:
+            res_info = "none"
         print(
-            f"{model.name}: queue={model.queue_type}, strategy={model.strategy_name}, "
-            f"tables={[(table.seats, table.count) for table in model.tables]}, "
-            f"patience=(mean={model.patience_threshold_mean}, sd={model.patience_threshold_sd})"
+            f"{model.name}: queue={model.queue_type} strategy={model.strategy_name} "
+            f"tables={tables} "
+            f"counters={model.counters} kiosks={model.kiosks} "
+            f"kiosk_usage_percent={model.kiosk_usage_percent} "
+            f"patience_mean={model.patience_threshold_mean} patience_sd={model.patience_threshold_sd} "
+            f"arrival_pattern={model.arrival_pattern} reservations={res_info}"
         )
     return 0
+
+
+def _ensure_parent_dir(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
 
 
 def command_write_example(model_name: str, output: str) -> int:
@@ -106,12 +180,18 @@ def command_write_example(model_name: str, output: str) -> int:
         duration=120,
         generated=False,
     )
-    write_scenario_file(Path(output), scenario)
-    print(f"Wrote example scenario to {output}")
+    out = Path(output)
+    _ensure_parent_dir(out)
+    write_scenario_file(out, scenario)
+    print(f"Wrote example scenario to {out.resolve()}")
     return 0
 
 
 def command_generate(model_name: str, output: str, seed: int, arrival_count: int, duration: int) -> int:
+    if arrival_count <= 0:
+        raise ValueError("--arrival-count must be a positive integer")
+    if duration <= 0:
+        raise ValueError("--duration must be a positive integer")
     model = get_model(model_name)
     scenario = generate_random_scenario(
         business_model=model,
@@ -120,19 +200,31 @@ def command_generate(model_name: str, output: str, seed: int, arrival_count: int
         duration=duration,
         generated=True,
     )
-    write_scenario_file(Path(output), scenario)
-    print(f"Wrote generated scenario to {output}")
+    out = Path(output)
+    _ensure_parent_dir(out)
+    write_scenario_file(out, scenario)
+    print(f"Wrote generated scenario to {out.resolve()} ({len(scenario.arrivals)} arrivals)")
     return 0
 
 
 def command_run(scenario_path: str, output: str | None) -> int:
-    scenario = _load_scenario_path(Path(scenario_path))
+    path = Path(scenario_path)
+    scenario = _load_scenario_path(path)
     result = run_simulation(scenario)
 
     if output:
-        write_result_file(Path(output), result)
-        print(f"Wrote simulation result to {output}")
+        out = Path(output)
+        _ensure_parent_dir(out)
+        write_result_file(out, result)
+        print(f"Wrote simulation result to {out.resolve()}")
     else:
+        print(
+            f"scenario={path.resolve()} "
+            f"model={scenario.business_model_name} "
+            f"queue={scenario.queue_type} "
+            f"strategy={scenario.strategy_name}"
+        )
+        print()
         print(result.statistics.to_pretty_text())
     return 0
 
@@ -167,7 +259,17 @@ def command_analyze(
         strict_expectations=strict_expectations,
     )
     write_analysis_reports(target_dir, result)
-    print(f"Wrote analysis report to {target_dir}")
+    resolved = target_dir.resolve()
+    print(f"Wrote suite analysis to {resolved}:")
+    for name in (
+        "analysis_report.md",
+        "aggregate_metrics.csv",
+        "aggregate_metrics.json",
+        "all_runs_raw_metrics.csv",
+    ):
+        print(f"  {name}")
+    if strict_expectations:
+        print("All metric expectations met.")
     return 0
 
 
@@ -308,11 +410,10 @@ def main() -> int:
             )
         if args.command == "gui":
             return command_gui()
-    except ValueError as error:
-        parser.exit(status=2, message=f"error: {error}\n")
-
-    parser.error(f"Unknown command: {args.command}")
-    return 2
+        parser.error(f"Unknown command: {args.command}")
+    except (ValueError, FileNotFoundError, PermissionError, json.JSONDecodeError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
