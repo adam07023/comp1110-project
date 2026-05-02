@@ -11,7 +11,7 @@ The project can be used through either a command-line interface or a PyQt6 graph
 | **Language** | Python **3** (uses type hints and `list[str]` syntax; use **3.10+** for best compatibility). |
 | **Execution** | **Interpreted** — no compilation step. Run modules with `python3`. |
 | **Core runtime** | Standard library plus this repository’s source; simulations and CLI work without extra packages. |
-| **Optional** | **PyQt6** for `python3 main.py gui`; **scipy** for faster truncated-normal sampling (otherwise bounded rejection sampling). |
+| **Optional but highly recommended** | **PyQt6** for `python3 main.py gui`; **scipy** for faster truncated-normal sampling (otherwise bounded rejection sampling). |
 
 Install optional packages when needed:
 
