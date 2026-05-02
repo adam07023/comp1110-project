@@ -7,10 +7,10 @@ This directory contains the report-ready restaurant scenario analysis. The v2 wo
 From the project root:
 
 ```bash
-python3 "Scenario analysis/runner.py"
+python3 "scenario_analysis/runner.py"
 ```
 
-The runner reads every JSON file in `scenarios/`, executes each run with seeds `42`, `123`, and `999`, writes run outputs to `outputs/v2/`, and writes CSV/report summaries to `summaries/` and `insights/`.
+The runner reads every JSON file in `scenarios/`, executes each run with seeds `42`, `123`, and `999`, writes run outputs to `outputs/`, and writes CSV/report summaries to `summaries/` and `insights/`.
 
 ## V2 Config Format
 
@@ -45,7 +45,7 @@ Each file in `scenarios/` describes one pair:
 
 - `inputs/baseline_casual_dining_seed42.json`: canonical v2 baseline.
 - `inputs/shared_arrivals/`: shared queue inputs used to keep comparisons controlled.
-- `outputs/v2/`: result text files and executable scenario JSON files for every run and seed.
+- `outputs/`: result text files and executable scenario JSON files for every run and seed.
 - `summaries/v2_all_runs_raw_metrics.csv`: per-run, per-seed metrics.
 - `summaries/v2_pair_metric_summary.csv`: mean, min, max, and range per metric per run.
 - `summaries/v2_assertions.csv`: assertion pass/fail results.

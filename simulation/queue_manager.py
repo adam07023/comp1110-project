@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from domain.models import GroupArrival
+from domain.models import GroupArrival, Table
 
 
 @dataclass(frozen=True)
@@ -13,6 +13,8 @@ class QueueEntry:
 
 
 class BaseQueueManager:
+    table_aware_ordering = False
+
     def enqueue(self, group: GroupArrival, leave_time: int | None = None) -> None:
         raise NotImplementedError
 
@@ -27,6 +29,13 @@ class BaseQueueManager:
 
     def queue_lengths_by_label(self) -> dict[str, int]:
         return {"all": self.size()}
+
+    def entries_for_table(self, table: Table) -> list[QueueEntry]:
+        return [
+            entry
+            for entry in self.all_entries()
+            if entry.group.group_size <= table.seats
+        ]
 
 
 class SingleQueueManager(BaseQueueManager):
@@ -47,6 +56,8 @@ class SingleQueueManager(BaseQueueManager):
 
 
 class GroupSizeQueueManager(BaseQueueManager):
+    table_aware_ordering = True
+
     def __init__(self) -> None:
         self._queues: dict[str, deque[QueueEntry]] = defaultdict(deque)
 
@@ -74,6 +85,23 @@ class GroupSizeQueueManager(BaseQueueManager):
 
     def queue_lengths_by_label(self) -> dict[str, int]:
         return {label: len(self._queues[label]) for label in ("1-2", "3-4", "5+")}
+
+    def entries_for_table(self, table: Table) -> list[QueueEntry]:
+        if table.seats <= 2:
+            labels = ("1-2",)
+        elif table.seats <= 4:
+            labels = ("3-4", "1-2")
+        else:
+            labels = ("5+", "3-4", "1-2")
+
+        entries: list[QueueEntry] = []
+        for label in labels:
+            entries.extend(
+                entry
+                for entry in self._queues[label]
+                if entry.group.group_size <= table.seats
+            )
+        return list(entries)
 
 
 def build_queue_manager(queue_type: str) -> BaseQueueManager:

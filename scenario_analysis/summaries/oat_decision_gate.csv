@@ -1,6 +1,6 @@
 factor_passes_gate,mean_change,pair_id,passing_metric,sd_of_change
 True,-1.7277545991314105,S1,average_wait_time,1.1757880223892623
-False,0.0,S2,,0.0
+True,-0.9698372615039276,S2,average_wait_time,0.7159258333569479
 True,2.6666666666666665,S3,max_wait_time,2.309401076758503
 True,-0.8543771043771043,S4,average_ordering_wait_time,0.2730583163566918
 True,-3.3333333333333335,S5,min_wait_time,0.5773502691896257

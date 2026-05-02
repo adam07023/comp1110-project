@@ -7,7 +7,7 @@ from pathlib import Path
 
 def load_v2_runner():
     project_root = Path(__file__).resolve().parents[1]
-    runner_path = project_root / "Scenario analysis" / "runner.py"
+    runner_path = project_root / "scenario_analysis" / "runner.py"
     spec = importlib.util.spec_from_file_location("scenario_analysis_v2_runner", runner_path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)

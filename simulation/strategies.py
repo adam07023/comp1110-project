@@ -40,6 +40,11 @@ def choose_seating(
         return None
 
     if strategy_name == "fifo_fit":
+        if queue_manager.table_aware_ordering:
+            for table in sorted(available_tables, key=lambda item: (item.seats, item.table_id)):
+                fitting_entries = queue_manager.entries_for_table(table)
+                if fitting_entries:
+                    return SeatingChoice(entry=fitting_entries[0], table=table)
         for entry in sorted(entries, key=lambda item: (item.group.arrival_time, item.group.group_id)):
             table = _smallest_fitting_table(entry, available_tables)
             if table is not None:

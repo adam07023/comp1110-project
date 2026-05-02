@@ -159,6 +159,7 @@ def _aggregate_experiment(
     for run_name in run_names:
         rows = [record for record in records if record.run_name == run_name]
         metric_names = sorted({metric for row in rows for metric in row.metrics})
+        # Replicate runs are aggregated by run name to smooth stochastic noise.
         aggregates.append(
             AnalysisAggregateRecord(
                 experiment_name=experiment_name,
@@ -179,6 +180,7 @@ def _evaluate_expectations(
 ) -> list[AnalysisAggregateRecord]:
     if not aggregates:
         return aggregates
+    # Expectations are interpreted relative to the first run (baseline/control).
     baseline = aggregates[0]
     expectation_by_run = {
         run.name: run.expected_metrics_direction
@@ -225,6 +227,7 @@ def _direction_passed(
 
 
 def _metric_alias(metric: str) -> str:
+    # Allow concise expectation names while preserving canonical metric keys internally.
     aliases = {
         "table_utilization": "table_utilization_rate",
         "server_utilization": "server_utilization_rate",

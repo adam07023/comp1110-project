@@ -10,6 +10,7 @@ from analysis.report_writer import write_analysis_reports
 from analysis.runner import run_analysis_suite
 from domain.business_model import BusinessModel
 from domain.models import GroupArrival, Scenario, SimulationResult
+from fileio.json_scenario_io import load_scenario_json
 from fileio.result_writer import write_result_file
 from fileio.scenario_loader import load_scenario
 from fileio.scenario_writer import write_scenario_file
@@ -125,7 +126,7 @@ def command_generate(model_name: str, output: str, seed: int, arrival_count: int
 
 
 def command_run(scenario_path: str, output: str | None) -> int:
-    scenario = load_scenario(Path(scenario_path))
+    scenario = _load_scenario_path(Path(scenario_path))
     result = run_simulation(scenario)
 
     if output:
@@ -134,6 +135,12 @@ def command_run(scenario_path: str, output: str | None) -> int:
     else:
         print(result.statistics.to_pretty_text())
     return 0
+
+
+def _load_scenario_path(path: Path) -> Scenario:
+    if path.suffix.lower() == ".json":
+        return load_scenario_json(path)
+    return load_scenario(path)
 
 
 def command_analyze(
@@ -214,7 +221,7 @@ def cli_run_simulation(scenario: Scenario) -> SimulationResult:
 
 def cli_load_scenario(scenario_path: str) -> Scenario:
     """Load a scenario from a file."""
-    return load_scenario(Path(scenario_path))
+    return _load_scenario_path(Path(scenario_path))
 
 
 def cli_save_scenario(scenario: Scenario, output_path: str) -> None:

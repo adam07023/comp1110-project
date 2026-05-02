@@ -187,6 +187,7 @@ def _string_dict_field(payload: dict[str, Any], key: str) -> dict[str, str]:
 
 
 def _validate_overrides(overrides: dict[str, Any], label: str) -> None:
+    # This is domain-level validation for experiment semantics, not just JSON shape.
     unknown_keys = set(overrides) - ALLOWED_OVERRIDE_KEYS
     if unknown_keys:
         unknown = ", ".join(sorted(unknown_keys))

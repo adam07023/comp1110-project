@@ -269,3 +269,28 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(result.statistics.max_queue_length_by_queue["1-2"], 0)
         self.assertEqual(result.statistics.max_queue_length_by_queue["3-4"], 1)
         self.assertEqual(result.statistics.max_queue_length_by_queue["5+"], 1)
+
+    def test_group_size_queue_prioritizes_matching_lane_for_table(self) -> None:
+        scenario = Scenario(
+            business_model_name="test",
+            queue_type="queue_by_group_size",
+            strategy_name="fifo_fit",
+            tables=[TableInventory(seats=4, count=1)],
+            arrivals=[
+                GroupArrival(group_id="G0", arrival_time=0, group_size=4, dining_duration=10),
+                GroupArrival(group_id="G1", arrival_time=1, group_size=2, dining_duration=10),
+                GroupArrival(group_id="G2", arrival_time=2, group_size=4, dining_duration=10),
+            ],
+            counters=3,
+            counter_order_time_min=0,
+            counter_order_time_max=0,
+            counter_order_time_mean=0,
+            counter_order_time_sd=0,
+        )
+
+        result = run_simulation(scenario)
+
+        self.assertEqual(
+            [seated.group.group_id for seated in result.seated_groups],
+            ["G0", "G2", "G1"],
+        )

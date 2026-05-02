@@ -1,7 +1,7 @@
 b_minus_a,d_minus_c,interaction_detected,interaction_gap,interpretation,metric,pair_id
 -0.3148723257418915,-3.2748259537733215,True,2.95995362803143,The factor effect changes across levels for F1; inspect the sign relative to the metric.,average_wait_time,F1
-0.0,0.0,False,0.0,No measurable interaction in the selected metric.,service_level_rate,F2
+0.023809523809523836,0.05132099022259207,True,-0.02751146641306823,The factor effect changes across levels for F2; inspect the sign relative to the metric.,service_level_rate,F2
 -0.6666666666666643,-0.3333333333333357,True,-0.3333333333333286,The factor effect changes across levels for F3; inspect the sign relative to the metric.,served_groups,F3
 0.0,-0.021025641025641084,True,0.021025641025641084,The factor effect changes across levels for F4; inspect the sign relative to the metric.,service_level_rate,F4
 0.007625272331154731,-0.011655011655011593,True,0.019280283986166324,The factor effect changes across levels for F5; inspect the sign relative to the metric.,service_level_rate,F5
--1.727754599131412,-1.727754599131412,False,0.0,No measurable interaction in the selected metric.,average_wait_time,F6
+-1.727754599131412,-0.7579173376274841,True,-0.9698372615039279,The factor effect changes across levels for F6; inspect the sign relative to the metric.,average_wait_time,F6

@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 )
 
 from domain.business_model import BusinessModel, GeneratorProfile
-from domain.models import Scenario, TableInventory
+from domain.models import GroupArrival, Scenario, TableInventory
 from fileio.json_scenario_io import load_scenario_json, write_scenario_json
 from main import (
     MAX_QUEUE_LENGTH,
@@ -694,6 +694,7 @@ class Layer2Widget(QWidget):
                     arrival.patience_override,
                     arrival.is_reservation,
                     arrival.scheduled_time,
+                    arrival.group_id,
                 )
         finally:
             self.table.blockSignals(False)
@@ -731,6 +732,35 @@ class Layer2Widget(QWidget):
         if not self.model:
             raise ValueError("No business model selected")
 
+        source = self.loaded_scenario
+        if source is not None:
+            arrivals = self._read_arrivals_preserving_loaded_ids()
+            return Scenario(
+                business_model_name=source.business_model_name,
+                queue_type=source.queue_type,
+                strategy_name=source.strategy_name,
+                tables=source.tables,
+                arrivals=arrivals,
+                patience_threshold_mean=source.patience_threshold_mean,
+                patience_threshold_sd=source.patience_threshold_sd,
+                seed=source.seed,
+                generated=source.generated,
+                counters=source.counters,
+                kiosks=source.kiosks,
+                kiosk_usage_percent=source.kiosk_usage_percent,
+                counter_order_time_min=source.counter_order_time_min,
+                counter_order_time_max=source.counter_order_time_max,
+                counter_order_time_mean=source.counter_order_time_mean,
+                counter_order_time_sd=source.counter_order_time_sd,
+                kiosk_order_time_min=source.kiosk_order_time_min,
+                kiosk_order_time_max=source.kiosk_order_time_max,
+                kiosk_order_time_mean=source.kiosk_order_time_mean,
+                kiosk_order_time_sd=source.kiosk_order_time_sd,
+                reservation_policy=source.reservation_policy,
+                reserved_table_percent=source.reserved_table_percent,
+                reservation_hold_before_min=source.reservation_hold_before_min,
+                reservation_hold_after_min=source.reservation_hold_after_min,
+            )
         arrivals = cli_validate_queue_rows(self._read_rows(), self.model)
         return Scenario(
             business_model_name=self.model.name,
@@ -759,6 +789,50 @@ class Layer2Widget(QWidget):
             reservation_hold_after_min=self.model.reservation_hold_after_min,
         )
 
+    def _read_arrivals_preserving_loaded_ids(self) -> list[GroupArrival]:
+        if not self.model:
+            raise ValueError("No business model selected")
+        profile = self.model.generator_profile
+        rows = self._read_rows()
+        arrivals: list[GroupArrival] = []
+        if len(rows) > MAX_QUEUE_LENGTH:
+            raise ValueError(f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
+        for index, row in enumerate(rows):
+            if row.arrival_time < 0:
+                raise ValueError("Arrival time cannot be negative")
+            if not (profile.min_group_size <= row.group_size <= profile.max_group_size):
+                raise ValueError(
+                    f"Group size must be between {profile.min_group_size} and {profile.max_group_size}"
+                )
+            if not (profile.min_dining_duration <= row.dining_duration <= profile.max_dining_duration):
+                raise ValueError(
+                    "Dining duration must be between "
+                    f"{profile.min_dining_duration} and {profile.max_dining_duration}"
+                )
+            if row.patience_override is not None and row.patience_override <= 0:
+                raise ValueError("Patience value must be positive when provided")
+            if row.is_reservation and row.scheduled_time is None:
+                raise ValueError("Reservation rows must include a scheduled time")
+            if row.scheduled_time is not None and row.scheduled_time < 0:
+                raise ValueError("Scheduled time cannot be negative")
+
+            arrival_item = self.table.item(index, 0)
+            group_id = ""
+            if arrival_item is not None:
+                group_id = str(arrival_item.data(Qt.ItemDataRole.UserRole) or "")
+            arrivals.append(
+                GroupArrival(
+                    group_id=group_id or f"G{index + 1}",
+                    arrival_time=row.arrival_time,
+                    group_size=row.group_size,
+                    dining_duration=row.dining_duration,
+                    patience_override=row.patience_override,
+                    is_reservation=row.is_reservation,
+                    scheduled_time=row.scheduled_time,
+                )
+            )
+        return sorted(arrivals, key=lambda row: (row.arrival_time, row.group_id))
+
     def _randomize(self) -> None:
         if not self.model:
             return
@@ -781,6 +855,7 @@ class Layer2Widget(QWidget):
         patience_override: int | None = None,
         is_reservation: bool = False,
         scheduled_time: int | None = None,
+        group_id: str | None = None,
     ) -> None:
         if self.table.rowCount() >= MAX_QUEUE_LENGTH:
             QMessageBox.warning(self, "Queue Limit", f"Queue length cannot exceed {MAX_QUEUE_LENGTH}")
@@ -796,7 +871,10 @@ class Layer2Widget(QWidget):
             "" if scheduled_time is None else str(scheduled_time),
         ]
         for column, value in enumerate(values):
-            self.table.setItem(row, column, QTableWidgetItem(value))
+            item = QTableWidgetItem(value)
+            if column == 0 and group_id:
+                item.setData(Qt.ItemDataRole.UserRole, group_id)
+            self.table.setItem(row, column, item)
 
     def _remove_row(self) -> None:
         row = self.table.currentRow()
@@ -811,26 +889,33 @@ class Layer2Widget(QWidget):
         try:
             rows: list[list[str]] = []
             for row in range(self.table.rowCount()):
-                rows.append(
-                    [
-                        self.table.item(row, column).text() if self.table.item(row, column) else ""
-                        for column in range(self.table.columnCount())
-                    ]
-                )
+                values = [
+                    self.table.item(row, column).text() if self.table.item(row, column) else ""
+                    for column in range(self.table.columnCount())
+                ]
+                arrival_item = self.table.item(row, 0)
+                group_id = ""
+                if arrival_item is not None:
+                    group_id = str(arrival_item.data(Qt.ItemDataRole.UserRole) or "")
+                rows.append(values + [group_id])
 
-            def arrival_key(values: list[str]) -> tuple[int, str]:
+            def arrival_key(values: list[str]) -> tuple[int, str, str]:
                 try:
-                    return int(values[0]), values[0]
+                    return int(values[0]), values[6], values[0]
                 except ValueError:
-                    return 10**9, values[0]
+                    return 10**9, values[6], values[0]
 
             rows.sort(key=arrival_key)
             self.table.setRowCount(0)
             for values in rows:
                 row = self.table.rowCount()
                 self.table.insertRow(row)
-                for column, value in enumerate(values):
-                    self.table.setItem(row, column, QTableWidgetItem(value))
+                group_id = values[6]
+                for column, value in enumerate(values[:6]):
+                    item = QTableWidgetItem(value)
+                    if column == 0 and group_id:
+                        item.setData(Qt.ItemDataRole.UserRole, group_id)
+                    self.table.setItem(row, column, item)
         finally:
             self.table.blockSignals(False)
             self._is_sorting = False
@@ -969,39 +1054,46 @@ class MainWindow(QMainWindow):
 
     def _on_scenario_loaded(self, scenario: Scenario) -> None:
         builtin = get_builtin_models().get(scenario.business_model_name)
-        model = builtin
-        if model is None:
-            model = BusinessModel(
-                name=scenario.business_model_name,
-                queue_type=scenario.queue_type,
-                strategy_name=scenario.strategy_name,
-                tables=scenario.tables,
-                generator_profile=GeneratorProfile(
-                    min_group_size=min((a.group_size for a in scenario.arrivals), default=1),
-                    max_group_size=max((a.group_size for a in scenario.arrivals), default=1),
-                    group_size_weights={1: 1.0},
-                    min_dining_duration=min((a.dining_duration for a in scenario.arrivals), default=1),
-                    max_dining_duration=max((a.dining_duration for a in scenario.arrivals), default=1),
-                ),
-                patience_threshold_mean=scenario.patience_threshold_mean,
-                patience_threshold_sd=scenario.patience_threshold_sd,
-                counters=scenario.counters,
-                kiosks=scenario.kiosks,
-                kiosk_usage_percent=scenario.kiosk_usage_percent,
-                counter_order_time_min=scenario.counter_order_time_min,
-                counter_order_time_max=scenario.counter_order_time_max,
-                counter_order_time_mean=scenario.counter_order_time_mean,
-                counter_order_time_sd=scenario.counter_order_time_sd,
-                kiosk_order_time_min=scenario.kiosk_order_time_min,
-                kiosk_order_time_max=scenario.kiosk_order_time_max,
-                kiosk_order_time_mean=scenario.kiosk_order_time_mean,
-                kiosk_order_time_sd=scenario.kiosk_order_time_sd,
-                reservation_policy=scenario.reservation_policy,
-                reserved_table_percent=scenario.reserved_table_percent,
-                reservation_hold_before_min=scenario.reservation_hold_before_min,
-                reservation_hold_after_min=scenario.reservation_hold_after_min,
-                notes="Model reconstructed from JSON scenario",
+        min_group_size = min((a.group_size for a in scenario.arrivals), default=1)
+        max_group_size = max((a.group_size for a in scenario.arrivals), default=1)
+        if builtin is not None:
+            profile = builtin.generator_profile
+        else:
+            profile = GeneratorProfile(
+                min_group_size=min_group_size,
+                max_group_size=max_group_size,
+                group_size_weights={
+                    group_size: 1.0
+                    for group_size in range(min_group_size, max_group_size + 1)
+                },
+                min_dining_duration=min((a.dining_duration for a in scenario.arrivals), default=1),
+                max_dining_duration=max((a.dining_duration for a in scenario.arrivals), default=1),
             )
+        model = BusinessModel(
+            name=scenario.business_model_name,
+            queue_type=scenario.queue_type,
+            strategy_name=scenario.strategy_name,
+            tables=scenario.tables,
+            generator_profile=profile,
+            patience_threshold_mean=scenario.patience_threshold_mean,
+            patience_threshold_sd=scenario.patience_threshold_sd,
+            counters=scenario.counters,
+            kiosks=scenario.kiosks,
+            kiosk_usage_percent=scenario.kiosk_usage_percent,
+            counter_order_time_min=scenario.counter_order_time_min,
+            counter_order_time_max=scenario.counter_order_time_max,
+            counter_order_time_mean=scenario.counter_order_time_mean,
+            counter_order_time_sd=scenario.counter_order_time_sd,
+            kiosk_order_time_min=scenario.kiosk_order_time_min,
+            kiosk_order_time_max=scenario.kiosk_order_time_max,
+            kiosk_order_time_mean=scenario.kiosk_order_time_mean,
+            kiosk_order_time_sd=scenario.kiosk_order_time_sd,
+            reservation_policy=scenario.reservation_policy,
+            reserved_table_percent=scenario.reserved_table_percent,
+            reservation_hold_before_min=scenario.reservation_hold_before_min,
+            reservation_hold_after_min=scenario.reservation_hold_after_min,
+            notes="Model reconstructed from JSON scenario",
+        )
         self.state = AppState(model=model, scenario=scenario, loaded_from_json=True)
         self.layer2.set_context(model=model, loaded_scenario=scenario)
         self.stack.setCurrentWidget(self.layer2)

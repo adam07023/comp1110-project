@@ -48,8 +48,10 @@ class GroupState:
 
 
 class ListQueueManager(BaseQueueManager):
-    def __init__(self, entries: list[QueueEntry]) -> None:
+    def __init__(self, entries: list[QueueEntry], queue_type: str = "single_queue") -> None:
         self._entries = entries
+        self.queue_type = queue_type
+        self.table_aware_ordering = queue_type == "queue_by_group_size"
 
     def enqueue(self, group: GroupArrival, leave_time: int | None = None) -> None:
         self._entries.append(QueueEntry(group=group, leave_time=leave_time or 0))
@@ -59,6 +61,30 @@ class ListQueueManager(BaseQueueManager):
 
     def all_entries(self) -> list[QueueEntry]:
         return list(self._entries)
+
+    def entries_for_table(self, table) -> list[QueueEntry]:
+        if not self.table_aware_ordering:
+            return super().entries_for_table(table)
+
+        def queue_label(entry: QueueEntry) -> str:
+            if entry.group.group_size <= 2:
+                return "1-2"
+            if entry.group.group_size <= 4:
+                return "3-4"
+            return "5+"
+
+        if table.seats <= 2:
+            labels = ("1-2",)
+        elif table.seats <= 4:
+            labels = ("3-4", "1-2")
+        else:
+            labels = ("5+", "3-4", "1-2")
+        return [
+            entry
+            for label in labels
+            for entry in self._entries
+            if queue_label(entry) == label and entry.group.group_size <= table.seats
+        ]
 
 
 def _sample_patience_threshold(mean: float, sd: float, rng: random.Random) -> int:
@@ -172,6 +198,8 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
         group_id: str | None = None,
         **payload: object,
     ) -> None:
+        # Priority queue ordering guarantees deterministic tie-breaks:
+        # time first, then event priority, then insertion sequence.
         heapq.heappush(
             event_queue,
             (
@@ -245,6 +273,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
                 continue
             channel = _choose_order_channel(scenario, counter_available, kiosk_available, rng)
             if channel is None:
+                # If resources disappear mid-loop, put the group back at the front.
                 ordering_queue.appendleft(group_id)
                 break
             if channel == "kiosk":
@@ -285,7 +314,11 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
         if not entries or not allowed_table_ids:
             return False
         choices = [available_tables[table_id] for table_id in allowed_table_ids if table_id in available_tables]
-        choice = choose_seating(scenario.strategy_name, ListQueueManager(entries), sorted(choices, key=lambda table: (table.seats, table.table_id)))
+        choice = choose_seating(
+            scenario.strategy_name,
+            ListQueueManager(entries, scenario.queue_type),
+            sorted(choices, key=lambda table: (table.seats, table.table_id)),
+        )
         if choice is None:
             return False
         seating_queue.remove(choice.entry)
@@ -323,7 +356,9 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
 
     def try_seating(timestamp: int) -> None:
         while True:
+            # Reservations get first pass over all free tables.
             seated_reservation = try_seating_for(timestamp, True, set(available_tables))
+            # Walk-ins can only use currently free tables that are not held.
             walk_in_ids = set(available_tables) - held_tables
             seated_walk_in = try_seating_for(timestamp, False, walk_in_ids)
             if not seated_reservation and not seated_walk_in:
@@ -389,6 +424,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             if state is None:
                 reservation_no_shows += 1
             if state is None or state.status in {"abandoned", "rejected"}:
+                # Release one held reserved table back to the walk-in pool for no-shows.
                 for table_id in list(held_tables):
                     if table_id in reserved_tables:
                         held_tables.remove(table_id)
@@ -409,6 +445,7 @@ def run_simulation(scenario: Scenario) -> SimulationResult:
             continue
 
         if event_type == "reservation_hold":
+            # Hold the largest available reserved table first to mirror reservation bias.
             available_reserved = [
                 table for table in available_tables.values() if table.table_id in reserved_tables
             ]

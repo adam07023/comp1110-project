@@ -89,6 +89,7 @@ def _normalize_arrivals(
             and reservation_every_n is not None
             and index % reservation_every_n == 0
         )
+        # Stable IDs keep cross-run comparisons deterministic and readable.
         group_prefix = "R" if is_reservation else "G"
         normalized.append(
             GroupArrival(
@@ -106,6 +107,7 @@ def _normalize_arrivals(
 
 def _model_with_overrides(model: BusinessModel, overrides: dict[str, Any]) -> BusinessModel:
     normalized = dict(overrides)
+    # Accept legacy/short config keys and normalize to dataclass field names.
     if "strategy" in normalized:
         normalized["strategy_name"] = normalized.pop("strategy")
     if "servers" in normalized and "counters" not in normalized:

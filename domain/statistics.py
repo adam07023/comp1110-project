@@ -40,6 +40,7 @@ def compute_statistics(
 
     occupied_table_time = sum(seated.departure_time - seated.seated_time for seated in seated_groups)
     table_count = len(tables)
+    # Utilization is normalized by total table-time capacity over the simulated horizon.
     denominator = simulation_end_time * table_count if simulation_end_time > 0 and table_count > 0 else 0
     utilization = occupied_table_time / denominator if denominator else 0.0
 
@@ -54,6 +55,7 @@ def compute_statistics(
 
     longest_queue = max(queue_lengths) if queue_lengths else 0
     shortest_queue = min(queue_lengths) if queue_lengths else 0
+    # Server utilization uses total ordering-resource busy-time over total available time.
     server_denominator = simulation_end_time * server_count if simulation_end_time > 0 else 0
     service_level_count = sum(1 for wait in waits if wait <= service_level_threshold)
     queue_labels = {

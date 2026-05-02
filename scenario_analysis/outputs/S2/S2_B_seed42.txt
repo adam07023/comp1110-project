@@ -56,32 +56,32 @@ strategy=fifo_fit
 served_groups=27
 rejected_groups=13
 total_groups=40
-average_wait_time=10.07
+average_wait_time=9.59
 min_wait_time=2
-max_wait_time=23
+max_wait_time=21
 longest_queue_length=12
 shortest_queue_length=0
-table_utilization_rate=0.6550
-simulation_end_time=196
+table_utilization_rate=0.6290
+simulation_end_time=203
 service_level_threshold=20
-service_level_rate=0.8889
+service_level_rate=0.9259
 average_ordering_wait_time=0.11
-server_utilization_rate=0.2194
+server_utilization_rate=0.2118
 abandoned_at_ordering=0
 abandoned_at_seating=13
 reservation_groups_served=0
 reservation_no_shows=0
 reservation_tables_released=0
 max_queue_length_queue_1_2=8
-max_queue_length_queue_3_4=5
+max_queue_length_queue_3_4=4
 max_queue_length_queue_5plus=1
-average_wait_group_size_1=10.71
-average_wait_group_size_2=7.90
-average_wait_group_size_3=13.00
-average_wait_group_size_4=13.67
+average_wait_group_size_1=9.50
+average_wait_group_size_2=6.22
+average_wait_group_size_3=12.50
+average_wait_group_size_4=14.20
 average_wait_group_size_5=4.00
 average_wait_group_size_6=10.50
-average_ordering_wait_group_size_1=0.43
+average_ordering_wait_group_size_1=0.50
 average_ordering_wait_group_size_2=0.00
 average_ordering_wait_group_size_3=0.00
 average_ordering_wait_group_size_4=0.00
@@ -97,12 +97,12 @@ G19,left_due_to_patience
 G17,left_due_to_patience
 G18,left_due_to_patience
 G23,left_due_to_patience
+G24,left_due_to_patience
 G28,left_due_to_patience
-G27,left_due_to_patience
 G37,left_due_to_patience
 G40,left_due_to_patience
+G36,left_due_to_patience
 G38,left_due_to_patience
-G39,left_due_to_patience
 
 [event_log]
 # timestamp, event_type, group_id, table_id, queue_size, message, metadata
@@ -225,22 +225,22 @@ G39,left_due_to_patience
 83,order_complete,G30,,7,Group G30 completed ordering,
 84,abandonment,G23,,7,Group G23 left during seating due to patience limit,stage=seating;waited_time=19
 85,departure,G7,T13,7,Group G7 left table T13,
-85,seated,G24,T13,6,Seated group G24 at table T13,table_size=6;wait_time=18
-85,order_complete,G31,,6,Group G31 completed ordering,
-86,abandonment,G28,,6,Group G28 left during seating due to patience limit,stage=seating;waited_time=15
-87,departure,G9,T11,6,Group G9 left table T11,
-87,seated,G25,T11,5,Seated group G25 at table T11,table_size=4;wait_time=18
-87,arrival,G32,,5,Group G32 arrived,dining_duration=60;group_size=3;leave_time=116;patience_threshold=29
-87,order_start,G32,,5,Group G32 started ordering at counter,order_channel=counter;order_duration=4
-88,departure,G2,T2,5,Group G2 left table T2,
-88,seated,G29,T2,4,Seated group G29 at table T2,table_size=2;wait_time=10
-88,arrival,G33,,4,Group G33 arrived,dining_duration=69;group_size=3;leave_time=113;patience_threshold=25
-88,order_start,G33,,4,Group G33 started ordering at counter,order_channel=counter;order_duration=3
-91,order_complete,G32,,4,Group G32 completed ordering,
-91,order_complete,G33,,5,Group G33 completed ordering,
-92,departure,G10,T6,6,Group G10 left table T6,
-92,seated,G26,T6,5,Seated group G26 at table T6,table_size=4;wait_time=23
-94,abandonment,G27,,4,Group G27 left during seating due to patience limit,stage=seating;waited_time=23
+85,seated,G25,T13,6,Seated group G25 at table T13,table_size=6;wait_time=16
+85,abandonment,G24,,5,Group G24 left during seating due to patience limit,stage=seating;waited_time=18
+85,order_complete,G31,,5,Group G31 completed ordering,
+86,abandonment,G28,,5,Group G28 left during seating due to patience limit,stage=seating;waited_time=15
+87,departure,G9,T11,5,Group G9 left table T11,
+87,seated,G26,T11,4,Seated group G26 at table T11,table_size=4;wait_time=18
+87,arrival,G32,,4,Group G32 arrived,dining_duration=60;group_size=3;leave_time=116;patience_threshold=29
+87,order_start,G32,,4,Group G32 started ordering at counter,order_channel=counter;order_duration=4
+88,departure,G2,T2,4,Group G2 left table T2,
+88,seated,G29,T2,3,Seated group G29 at table T2,table_size=2;wait_time=10
+88,arrival,G33,,3,Group G33 arrived,dining_duration=69;group_size=3;leave_time=113;patience_threshold=25
+88,order_start,G33,,3,Group G33 started ordering at counter,order_channel=counter;order_duration=3
+91,order_complete,G32,,3,Group G32 completed ordering,
+91,order_complete,G33,,4,Group G33 completed ordering,
+92,departure,G10,T6,5,Group G10 left table T6,
+92,seated,G27,T6,4,Seated group G27 at table T6,table_size=4;wait_time=21
 95,departure,G12,T9,4,Group G12 left table T9,
 95,seated,G30,T9,3,Seated group G30 at table T9,table_size=4;wait_time=15
 95,arrival,G34,,3,Group G34 arrived,dining_duration=73;group_size=2;leave_time=114;patience_threshold=19
@@ -276,20 +276,20 @@ G39,left_due_to_patience
 112,seated,G35,T5,5,Seated group G35 at table T5,table_size=2;wait_time=16
 116,abandonment,G37,,4,Group G37 left during seating due to patience limit,stage=seating;waited_time=18
 121,departure,G11,T7,4,Group G11 left table T7,
-121,seated,G36,T7,3,Seated group G36 at table T7,table_size=4;wait_time=23
+121,seated,G39,T7,3,Seated group G39 at table T7,table_size=4;wait_time=14
 124,abandonment,G40,,2,Group G40 left during seating due to patience limit,stage=seating;waited_time=16
-140,abandonment,G38,,1,Group G38 left during seating due to patience limit,stage=seating;waited_time=37
-142,abandonment,G39,,0,Group G39 left during seating due to patience limit,stage=seating;waited_time=35
+128,abandonment,G36,,1,Group G36 left during seating due to patience limit,stage=seating;waited_time=30
+140,departure,G27,T6,1,Group G27 left table T6,
+140,abandonment,G38,,0,Group G38 left during seating due to patience limit,stage=seating;waited_time=37
 143,departure,G29,T2,0,Group G29 left table T2,
-149,departure,G24,T13,0,Group G24 left table T13,
 151,departure,G22,T3,0,Group G22 left table T3,
-156,departure,G26,T6,0,Group G26 left table T6,
+151,departure,G26,T11,0,Group G26 left table T11,
 159,departure,G21,T4,0,Group G21 left table T4,
 160,departure,G31,T12,0,Group G31 left table T12,
 161,departure,G32,T10,0,Group G32 left table T10,
-165,departure,G25,T11,0,Group G25 left table T11,
+163,departure,G25,T13,0,Group G25 left table T13,
 166,departure,G30,T9,0,Group G30 left table T9,
 175,departure,G33,T8,0,Group G33 left table T8,
 176,departure,G34,T1,0,Group G34 left table T1,
 182,departure,G35,T5,0,Group G35 left table T5,
-196,departure,G36,T7,0,Group G36 left table T7,
+203,departure,G39,T7,0,Group G39 left table T7,

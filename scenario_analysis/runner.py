@@ -25,7 +25,7 @@ from simulation.engine import run_simulation  # noqa: E402
 
 SCENARIO_DIR = ROOT / "scenarios"
 INPUT_DIR = ROOT / "inputs"
-OUTPUT_DIR = ROOT / "outputs" / "v2"
+OUTPUT_DIR = ROOT / "outputs"
 SUMMARY_DIR = ROOT / "summaries"
 INSIGHT_DIR = ROOT / "insights"
 
