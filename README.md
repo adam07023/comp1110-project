@@ -4,6 +4,23 @@ A Python discrete-event simulator for Topic C: Restaurant Queue Simulation. The 
 
 The project can be used through either a command-line interface or a PyQt6 graphical interface.
 
+## Language, environment, and build
+
+| Item | Details |
+|------|---------|
+| **Language** | Python **3** (uses type hints and `list[str]` syntax; use **3.10+** for best compatibility). |
+| **Execution** | **Interpreted** — no compilation step. Run modules with `python3`. |
+| **Core runtime** | Standard library plus this repository’s source; simulations and CLI work without extra packages. |
+| **Optional** | **PyQt6** for `python3 main.py gui`; **scipy** for faster truncated-normal sampling (otherwise bounded rejection sampling). |
+
+Install optional packages when needed:
+
+```bash
+python3 -m pip install PyQt6 scipy
+```
+
+Persistence and interchange use **text**, **JSON**, and **CSV** (and Markdown reports for batch analysis). No database.
+
 ## Features
 
 - Built-in restaurant presets: `fast_food`, `fine_dining`, `casual_dining`, `cafe`, and `food_truck`.
@@ -25,21 +42,18 @@ The project can be used through either a command-line interface or a PyQt6 graph
 
 ## Setup
 
-Install optional GUI/scientific dependencies:
-
-```bash
-python3 -m pip install PyQt6 scipy
-```
-
-`scipy` is optional but improves truncated-normal sampling. Without it, the program falls back to bounded rejection sampling.
-
 **CLI-only:** You do not need PyQt6 unless you run `python3 main.py gui`. Listing models, writing or generating scenarios, running simulations, and running automated analysis all work with the standard library plus the simulation code (and optional `scipy`).
 
-Run the unit tests:
+## Sample inputs and tests
+
+- **`examples/`** — sample **text** scenarios (and similar fixtures) you can pass to `main.py run --scenario …`. Use `main.py write-example` or `generate` to create additional scenarios.
+- **`tests/`** — automated **sample test cases** (`unittest`): engine behavior, strategies, loaders, validation, CLI, and analysis runners. Run everything with:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
+
+Topic-specific batch experiments are also configured under `suite_analysis/scenario_suite.json` and `scenario_analysis/scenarios/` (see `specifications/`).
 
 ## Run The GUI
 
@@ -107,25 +121,33 @@ python3 scenario_analysis/runner.py
 
 See `specifications/scenario_analysis_spec_v2.md` for the full procedure.
 
-## Core Files
+## Core files (source map)
 
-- `main.py`: command-line entry point and GUI-facing helper functions.
-- `suite_analysis/`: JSON experiment-suite config (`scenario_suite.json`), scenario builder, replicated batch runner, and report writers for `main.py analyze` (distinct from the v2 `scenario_analysis/` workflow).
-- `scenario_analysis/runner.py`: paired A/B scenario batch runs and v2 summary tables (see spec v2).
-- `gui/app.py`: PyQt6 interface for choosing models, building queues, loading/saving JSON, and viewing results.
-- `domain/models.py`: scenario, arrival, table, and statistics data structures.
-- `domain/events.py`: simulation event records for logging and tracing.
-- `domain/business_model.py`: preset/custom restaurant configuration structure.
-- `presets/builtins.py`: built-in restaurant models.
-- `generation/randomizer.py`: random arrival, group size, dining duration, and patience generation.
-- `generation/validators.py`: scenario validation.
-- `simulation/engine.py`: discrete-event simulation loop.
-- `simulation/queue_manager.py`: single queue and coarse group-size queue implementations.
-- `simulation/strategies.py`: table assignment strategies.
-- `fileio/scenario_loader.py` and `fileio/scenario_writer.py`: text scenario input/output.
-- `fileio/json_scenario_io.py`: JSON scenario input/output.
-- `fileio/result_writer.py`: text result report output.
-- `tests/`: unit tests for generation, engine behavior, queue logic, validation, file formats, strategies, the `suite_analysis` / `analyze` command, CLI wiring, and `scenario_analysis/runner.py` (see `specifications/scenario_analysis_spec_v2.md`).
+- `main.py` — CLI entry point (`list-models`, `write-example`, `generate`, `run`, `analyze`, `gui`) and helpers shared with the GUI.
+- `gui_main.py` — starts the PyQt application (`main.py gui`).
+- `gui/app.py` — main window: presets, queue editor, load/save JSON, run simulation, view results.
+- `domain/models.py` — scenario, arrivals, tables, statistics, simulation result containers.
+- `domain/events.py` — discrete-event log records.
+- `domain/business_model.py` — preset / generator configuration types.
+- `domain/statistics.py` — aggregates metrics after a run.
+- `presets/builtins.py` — built-in restaurant models.
+- `generation/randomizer.py` — random scenarios and sampling helpers.
+- `generation/validators.py` — validates scenarios before simulation.
+- `generation/seed_store.py` — seed metadata for reading/writing scenarios.
+- `simulation/engine.py` — discrete-event simulation loop.
+- `simulation/queue_manager.py` — queue data structures (`single_queue`, `queue_by_group_size`).
+- `simulation/strategies.py` — seating assignment strategies.
+- `simulation/allocator.py` — expands table inventory rows into individual tables.
+- `fileio/scenario_loader.py`, `fileio/scenario_writer.py` — text scenario I/O.
+- `fileio/json_scenario_io.py` — JSON scenario I/O.
+- `fileio/result_writer.py` — text result report I/O.
+- `suite_analysis/config.py` — loads and validates `scenario_suite.json`.
+- `suite_analysis/scenario_builder.py` — builds `Scenario` objects for each experiment run.
+- `suite_analysis/runner.py` — runs the full suite over seeds (`main.py analyze`).
+- `suite_analysis/report_writer.py` — CSV / JSON / Markdown aggregate reports.
+- `scenario_analysis/runner.py` — spec v2 paired scenarios, OAT/factorial summaries (separate from `analyze`).
+- `tests/` — unit tests (see **Sample inputs and tests** above).
+- `specifications/` — design and analysis specs for the topic.
 
 ## Scenario Model
 
